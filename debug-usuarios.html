@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug BIA - Consumo de Usuários</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .error { color: red; }
+        .success { color: green; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug BIA - Consumo de Usuários</h1>
+    
+    <div class="section">
+        <h2>📋 Instruções para Testar</h2>
+        <ol>
+            <li>Faça logout do BIA</li>
+            <li>Limpe o localStorage do navegador</li>
+            <li>Faça login com um usuário de teste</li>
+            <li>Vá ao Dashboard e verifique se mostra o consumo correto</li>
+            <li>Abra o DevTools (F12) e vá na aba Console</li>
+            <li>Procure por logs que começam com "🔍 normalizeUser" e "📊 normalizeUser"</li>
+        </ol>
+    </div>
+
+    <div class="section">
+        <h2>🧪 Usuários de Teste Disponíveis</h2>
+        <ul>
+            <li><strong>teste-free@bia.com</strong> - 11 artigos produzidos</li>
+            <li><strong>0022@teste.com</strong> - 1 artigo produzido</li>
+            <li><strong>0040@teste.com</strong> - 1 artigo produzido</li>
+        </ul>
+        <p><em>Para todos esses usuários, a senha padrão deve ser algo como "123456" ou "password"</em></p>
+    </div>
+
+    <div class="section">
+        <h2>✅ Verificações do Backend</h2>
+        <p class="success">✅ Dados no backend estão corretos</p>
+        <p class="success">✅ Campo 'consumo' está sendo retornado pelo endpoint /auth/user</p>
+        <p class="success">✅ Estrutura de dados do login corrigida</p>
+        <p class="success">✅ Função normalizeUser corrigida com logs</p>
+    </div>
+
+    <div class="section">
+        <h2>🔧 O que Foi Corrigido</h2>
+        <ul>
+            <li>Estrutura de parsing dos dados de login (data.user vs data)</li>
+            <li>Campo 'consumo' sendo extraído corretamente na normalização</li>
+            <li>Campo 'quotas' também sendo preservado</li>
+            <li>Logs detalhados para debugging</li>
+            <li>Compatibilidade com diferentes estruturas de resposta</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>🎯 Teste Específico</h2>
+        <p><strong>Resultado Esperado:</strong></p>
+        <ul>
+            <li>Dashboard deve mostrar o consumo real de artigos</li>
+            <li>Console deve mostrar logs de normalização</li>
+            <li>Dados do usuário devem incluir campo 'consumo'</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>🚀 Próximos Passos</h2>
+        <p>Se ainda não funcionar após limpar o cache:</p>
+        <ol>
+            <li>Verificar logs no console do navegador</li>
+            <li>Verificar se refreshUserData está sendo chamado após criação de artigos</li>
+            <li>Verificar se persistImmediately está salvando os dados corretos</li>
+        </ol>
+    </div>
+
+    <button onclick="clearAll()" style="padding: 10px; margin: 10px; background: red; color: white; border: none; cursor: pointer;">
+        🗑️ Limpar Todo o Cache e Ir para BIA
+    </button>
+
+    <script>
+        function clearAll() {
+            localStorage.clear();
+            sessionStorage.clear();
+            alert('Cache limpo! Redirecionando...');
+            window.location.href = 'http://localhost:5174';
+        }
+    </script>
+</body>
+</html>

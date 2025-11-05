@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Calendário - Correções Implementadas</title>
+    <style>
+        body { 
+            font-family: 'Montserrat', Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px; 
+            background: #f5f5f5; 
+        }
+        .card { 
+            background: white; 
+            padding: 20px; 
+            margin: 20px 0; 
+            border-radius: 8px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); 
+        }
+        .status { 
+            padding: 8px 12px; 
+            border-radius: 4px; 
+            font-weight: bold; 
+            margin: 10px 0; 
+        }
+        .published { background: #e7f5e7; color: #2d5a2d; }
+        .scheduled { background: #fff3cd; color: #856404; }
+        .pending { background: #f8d7da; color: #721c24; }
+        .button { 
+            padding: 8px 16px; 
+            margin: 5px; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            text-decoration: none; 
+            display: inline-block; 
+        }
+        .visualizar { background: #28a745; color: white; }
+        .online { background: #8c52ff; color: white; }
+        .test-section { margin: 20px 0; padding: 15px; border-left: 4px solid #8c52ff; }
+    </style>
+</head>
+<body>
+    <h1>🗓️ Teste de Correções do Calendário</h1>
+    
+    <div class="test-section">
+        <h2>✅ Correções Implementadas:</h2>
+        <ul>
+            <li><strong>Campo de imagem corrigido:</strong> Agora usa <code>image_url</code> em vez de <code>imageUrl</code></li>
+            <li><strong>Botão "Ver Online" condicional:</strong> Só aparece para posts do tipo <code>published</code> com URL válida</li>
+            <li><strong>URL correta de agendamentos:</strong> Extrai URL do campo <code>wordpress_post_id</code> quando disponível</li>
+            <li><strong>Melhor condicionamento:</strong> Verifica se URL não é apenas "#"</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>🔍 Exemplos de Comportamento:</h2>
+        
+        <div class="card">
+            <h3>📝 Post Publicado (Local)</h3>
+            <div class="status published">✅ Publicado (Local)</div>
+            <p><strong>Comportamento:</strong></p>
+            <ul>
+                <li>✅ Mostra imagem (se disponível)</li>
+                <li>✅ Botão "Visualizar" sempre visível</li>
+                <li>✅ Botão "Ver Online" visível (se tiver publishedUrl)</li>
+            </ul>
+            <div>
+                <button class="button visualizar">👁️ Visualizar</button>
+                <button class="button online">🔗 Ver Online</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>📅 Post Agendado (Futuro)</h3>
+            <div class="status scheduled">⏰ Agendado para WordPress</div>
+            <p><strong>Comportamento:</strong></p>
+            <ul>
+                <li>✅ Mostra imagem (se disponível)</li>
+                <li>✅ Botão "Visualizar" sempre visível</li>
+                <li>❌ Botão "Ver Online" NÃO aparece (tipo = scheduled)</li>
+            </ul>
+            <div>
+                <button class="button visualizar">👁️ Visualizar</button>
+                <span style="color: #666; font-style: italic;">Ver Online não disponível para posts agendados</span>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>✅ Post Publicado (Via Agendamento)</h3>
+            <div class="status published">🌐 Publicado via WordPress</div>
+            <p><strong>Comportamento:</strong></p>
+            <ul>
+                <li>✅ Mostra imagem (se disponível)</li>
+                <li>✅ Botão "Visualizar" sempre visível</li>
+                <li>✅ Botão "Ver Online" visível (URL extraída do WordPress)</li>
+            </ul>
+            <div>
+                <button class="button visualizar">👁️ Visualizar</button>
+                <button class="button online">🔗 Ver Online</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>⚠️ Post Pendente (Data passou)</h3>
+            <div class="status pending">🔄 Pendente (WordPress)</div>
+            <p><strong>Comportamento:</strong></p>
+            <ul>
+                <li>✅ Mostra imagem (se disponível)</li>
+                <li>✅ Botão "Visualizar" sempre visível</li>
+                <li>❌ Botão "Ver Online" NÃO aparece (tipo = scheduled)</li>
+            </ul>
+            <div>
+                <button class="button visualizar">👁️ Visualizar</button>
+                <span style="color: #666; font-style: italic;">Ver Online não disponível para posts pendentes</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔧 Como Testar:</h2>
+        <ol>
+            <li>Acesse o calendário em <code>http://localhost:5174/#calendario</code></li>
+            <li>Clique em uma data que tenha posts</li>
+            <li>Verifique se as imagens aparecem na visualização</li>
+            <li>Teste o botão "Visualizar" para ver se abre nova janela com imagem e conteúdo</li>
+            <li>Verifique se "Ver Online" só aparece para posts publicados</li>
+            <li>Para posts publicados via WordPress, verifique se o link está funcionando</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 Estrutura de Dados Atual:</h2>
+        <pre style="background: #f8f9fa; padding: 15px; border-radius: 4px; overflow-x: auto;">
+Post Object:
+{
+  id: "agendamento-1" | "article-17",
+  title: "Título do Post",
+  content: "Conteúdo HTML...",
+  date: "2025-09-01T16:43:13.000000Z",
+  type: "published" | "scheduled",
+  status: "Publicado via WordPress" | "Agendado para WordPress",
+  url: "https://site.com/post" | "#",
+  article: {
+    id: 17,
+    titulo: "Título",
+    conteudo: "HTML...",
+    image_url: "https://dalle.openai.com/...", // ✅ Campo correto
+    categoria: "Categoria"
+  },
+  source: "agendamento" | "local"
+}
+        </pre>
+    </div>
+
+    <script>
+        // Simular clicks nos botões para demonstração
+        document.querySelectorAll('.button').forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (this.textContent.includes('Visualizar')) {
+                    alert('🔍 Botão Visualizar: Abre nova janela com conteúdo completo + imagem');
+                } else if (this.textContent.includes('Ver Online')) {
+                    alert('🌐 Botão Ver Online: Abre link do post publicado no WordPress');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

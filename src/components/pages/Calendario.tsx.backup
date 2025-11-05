@@ -1,0 +1,904 @@
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/button';
+import { Badge } from '../ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Label } from '../ui/label';
+import { 
+  Calendar as CalendarIcon,
+  ChevronLeft, 
+  ChevronRight,
+  Monitor,
+  Filter,
+  XCircle,
+  CheckCircle,
+  Clock,
+  ExternalLink,
+  Eye,
+  AlertCircle,
+  Tag,
+  BarChart3
+} from '../icons';
+import { useBia } from '../BiaContext';
+import { useDashboard } from '../../hooks/useDashboard';
+
+interface CalendarioProps {
+  userData: any;
+  onUpdateUser?: (updatedUserData: any) => Promise<boolean>;
+}
+
+export function Calendario({ userData, onUpdateUser }: CalendarioProps) {
+  const { state } = useBia();
+  const { dashboardData, loading: isDashboardLoading, error: dashboardError } = useDashboard();
+  
+  // Dados reais do dashboard (seguindo padrão das outras páginas)
+  const { user, limits: realPlanLimits, usage } = dashboardData || {};
+  const currentUser = user || state.user || userData;
+  const currentPlan = currentUser?.plano || 'Free';
+  const isAdminOrDev = currentUser?.is_admin || currentUser?.is_developer;
+  const isDev = currentUser?.email === 'dev@bia.com' || currentUser?.email === 'admin@bia.com' || isAdminOrDev;
+  
+  // Estados principais
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedSiteId, setSelectedSiteId] = useState<'all' | number>('all');
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+
+  // Mês e ano atual
+  const currentMonth = currentDate.getMonth();
+  const currentYear = currentDate.getFullYear();
+
+  // Nomes dos meses
+  const monthNames = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+
+  // Nomes dos dias da semana
+  const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+  // Obter nome do site por ID
+  const getSiteName = useCallback((siteId: number) => {
+    const site = state.sites.find(s => s.id === siteId);
+    return site?.nome || `Site ${siteId}`;
+  }, [state.sites]);
+
+  // Obter lista de sites disponíveis
+  const availableSites = useMemo(() => {
+    const articleSiteIds = state.articles.map(a => a.siteId);
+    const ideaSiteIds = state.ideas.map(i => i.siteId);
+    const allSiteIds = [...articleSiteIds, ...ideaSiteIds];
+    const uniqueSiteIds = [...new Set(allSiteIds)];
+    const filteredSiteIds = uniqueSiteIds.filter(Boolean);
+    
+    return filteredSiteIds.map(siteId => ({
+      id: siteId,
+      name: getSiteName(siteId)
+    })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [state.articles, state.ideas, getSiteName]);
+
+  // Coletar todos os posts (artigos publicados e agendados)
+  const allPosts = useMemo(() => {
+    const posts: any[] = [];
+
+    console.log('📅 Analisando artigos para calendário:', state.articles.length);
+
+    // Artigos publicados - usando publishedAt e publishedUrl
+    state.articles.forEach(article => {
+      if (article.publishedUrl && (article.publishedAt || article.createdAt)) {
+        const publishDate = article.publishedAt || article.createdAt;
+        console.log('✅ Artigo publicado encontrado:', {
+          title: article.titulo,
+          publishedAt: article.publishedAt,
+          publishedUrl: article.publishedUrl,
+          date: publishDate
+        });
+        
+        posts.push({
+          id: `article-${article.id}`,
+          title: article.titulo,
+          content: article.conteudo,
+          date: publishDate,
+          type: 'published',
+          status: 'Publicado',
+          siteId: article.siteId,
+          url: article.publishedUrl,
+          articleId: article.id,
+          article: article
+        });
+      }
+    });
+
+    // Artigos agendados - usando scheduledDate
+    state.articles.forEach(article => {
+      if (article.scheduledDate && !article.publishedUrl) {
+        console.log('⏰ Artigo agendado encontrado:', {
+          title: article.titulo,
+          scheduledDate: article.scheduledDate,
+          hasPublishedUrl: !!article.publishedUrl
+        });
+        
+        posts.push({
+          id: `scheduled-${article.id}`,
+          title: article.titulo,
+          content: article.conteudo,
+          date: article.scheduledDate,
+          type: 'scheduled',
+          status: 'Agendado',
+          siteId: article.siteId,
+          scheduledDate: article.scheduledDate,
+          articleId: article.id,
+          article: article
+        });
+      }
+    });
+
+    console.log('📊 Posts encontrados para calendário:', {
+      total: posts.length,
+      published: posts.filter(p => p.type === 'published').length,
+      scheduled: posts.filter(p => p.type === 'scheduled').length
+    });
+
+    return posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [state.articles]);
+
+  // Filtrar posts por site
+  const filteredPosts = useMemo(() => {
+    if (selectedSiteId === 'all') {
+      return allPosts;
+    }
+    return allPosts.filter(post => post.siteId === selectedSiteId);
+  }, [allPosts, selectedSiteId]);
+
+  // Obter posts para um dia específico
+  const getPostsForDay = useCallback((day: number) => {
+    return filteredPosts.filter(post => {
+      if (!post.date) return false;
+      
+      try {
+        const postDate = new Date(post.date);
+        // Verificar se a data é válida
+        if (isNaN(postDate.getTime())) {
+          console.warn('⚠️ Data inválida encontrada:', post.date);
+          return false;
+        }
+        
+        return postDate.getDate() === day && 
+               postDate.getMonth() === currentMonth &&
+               postDate.getFullYear() === currentYear;
+      } catch (error) {
+        console.warn('⚠️ Erro ao processar data:', post.date, error);
+        return false;
+      }
+    });
+  }, [filteredPosts, currentMonth, currentYear]);
+
+  // Obter posts do dia selecionado
+  const selectedDayPosts = useMemo(() => {
+    return selectedDay ? getPostsForDay(selectedDay) : [];
+  }, [selectedDay, getPostsForDay]);
+
+  // Navegação do calendário
+  const navigateMonth = useCallback((direction: 'prev' | 'next') => {
+    if (direction === 'prev') {
+      setCurrentDate(new Date(currentYear, currentMonth - 1, 1));
+    } else {
+      setCurrentDate(new Date(currentYear, currentMonth + 1, 1));
+    }
+    setSelectedDay(null);
+  }, [currentYear, currentMonth]);
+
+  // Ir para hoje
+  const goToToday = useCallback(() => {
+    const today = new Date();
+    setCurrentDate(today);
+    setSelectedDay(today.getDate());
+  }, []);
+
+  // Função para aplicar filtros
+  const handleFilterChange = useCallback((filterType: 'site', value: any) => {
+    if (filterType === 'site') {
+      setSelectedSiteId(value);
+    }
+    setSelectedDay(null);
+  }, []);
+
+  // Função para contar palavras
+  const countWords = useCallback((htmlContent: string): number => {
+    if (!htmlContent) return 0;
+    const textContent = htmlContent.replace(/<[^>]*>/g, ' ').trim();
+    const words = textContent.split(/\s+/).filter(word => word.length > 0);
+    return words.length;
+  }, []);
+
+  // Função para visualizar artigo
+  const openArticleInNewTab = useCallback((post: any) => {
+    const article = post.article;
+    const wordCount = countWords(article.conteudo);
+    const articleWindow = window.open('', '_blank');
+    if (articleWindow) {
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html lang="pt-BR">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>${article.titulo}</title>
+          <style>
+            body { font-family: 'Montserrat', Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #fff; }
+            .article-title { font-family: 'Poppins', Arial, sans-serif; font-size: 2rem; margin-bottom: 20px; color: #8c52ff; line-height: 1.3; }
+            .article-meta { color: #666; margin-bottom: 20px; font-size: 0.9rem; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+            .article-content { line-height: 1.6; color: #333; }
+            .article-content h1, .article-content h2 { color: #8c52ff; margin-top: 30px; }
+            .article-content h3 { color: #6B4C93; margin-top: 25px; }
+            .article-image { width: 100%; max-width: 600px; margin: 20px 0; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+          </style>
+        </head>
+        <body>
+          <h1 class="article-title">${article.titulo}</h1>
+          <div class="article-meta">
+            📅 ${post.type === 'published' ? 'Publicado' : 'Agendado para'} ${new Date(post.date).toLocaleString('pt-BR')} • 📊 ${wordCount} palavras • 🌐 ${getSiteName(post.siteId)}
+          </div>
+          ${article.imageUrl ? `<img src="${article.imageUrl}" alt="${article.titulo}" class="article-image" />` : ''}
+          <div class="article-content">${article.conteudo || '<p>Conteúdo não disponível</p>'}</div>
+        </body>
+        </html>
+      `;
+      articleWindow.document.write(htmlContent);
+      articleWindow.document.close();
+    }
+  }, [countWords, getSiteName]);
+
+  // Renderizar o calendário
+  const renderCalendar = (): React.ReactElement[] => {
+    const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
+    const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
+    const daysInMonth = lastDayOfMonth.getDate();
+    const startDay = firstDayOfMonth.getDay();
+
+    const calendarDays: React.ReactElement[] = [];
+    const today = new Date();
+    const isCurrentMonth = today.getMonth() === currentMonth && today.getFullYear() === currentYear;
+
+    // Dias vazios do mês anterior
+    for (let i = 0; i < startDay; i++) {
+      calendarDays.push(
+        <div key={`prev-${i}`} className="h-24 bg-gray-50 border border-gray-100 opacity-40">
+        </div>
+      );
+    }
+
+    // Dias do mês atual
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dayPosts = getPostsForDay(day);
+      const isToday = isCurrentMonth && today.getDate() === day;
+      const isSelected = selectedDay === day;
+      const isPast = new Date(currentYear, currentMonth, day) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      
+      // Separar posts por tipo
+      const publishedPosts = dayPosts.filter(p => p.type === 'published');
+      const scheduledPosts = dayPosts.filter(p => p.type === 'scheduled');
+
+      calendarDays.push(
+        <div 
+          key={day}
+          onClick={() => setSelectedDay(day)}
+          className={`
+            h-24 border border-gray-200 p-2 cursor-pointer transition-all duration-200 overflow-hidden relative
+            ${isToday 
+              ? 'bg-[#8c52ff]/10 border-[#8c52ff] ring-2 ring-[#8c52ff]/20' 
+              : isSelected
+                ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-200'
+                : isPast 
+                  ? 'bg-gray-50/50 hover:bg-gray-100/50' 
+                  : 'bg-white hover:bg-gray-50 hover:border-gray-300'
+            }
+            ${dayPosts.length > 0 ? 'border-l-4 border-l-[#8c52ff]' : ''}
+          `}
+        >
+          {/* Cabeçalho do dia */}
+          <div className={`text-sm font-medium mb-1 flex items-center justify-between ${
+            isToday 
+              ? 'text-[#8c52ff]' 
+              : isSelected
+                ? 'text-blue-800'
+                : isPast 
+                  ? 'text-gray-400' 
+                  : 'text-gray-900'
+          }`}>
+            <span>{day}</span>
+            {dayPosts.length > 0 && (
+              <div className="flex items-center gap-1">
+                {publishedPosts.length > 0 && (
+                  <div className="w-2 h-2 rounded-full bg-green-500" title={`${publishedPosts.length} publicado(s)`}></div>
+                )}
+                {scheduledPosts.length > 0 && (
+                  <div className="w-2 h-2 rounded-full bg-amber-500" title={`${scheduledPosts.length} agendado(s)`}></div>
+                )}
+              </div>
+            )}
+          </div>
+          
+          {/* Indicador "Hoje" */}
+          {isToday && (
+            <div className="text-xs text-[#8c52ff] font-medium mb-1">Hoje</div>
+          )}
+
+          {/* Posts do dia */}
+          <div className="space-y-1">
+            {/* Mostrar até 2 posts */}
+            {dayPosts.slice(0, 2).map(post => (
+              <div 
+                key={post.id} 
+                className={`text-xs px-1.5 py-0.5 rounded truncate cursor-pointer transition-opacity hover:opacity-80 ${
+                  post.type === 'published' 
+                    ? 'bg-green-100 text-green-800 border border-green-200' 
+                    : 'bg-amber-100 text-amber-800 border border-amber-200'
+                }`}
+                title={`${post.title} (${post.type === 'published' ? 'Publicado' : 'Agendado'})`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedDay(day);
+                }}
+              >
+                {post.title}
+              </div>
+            ))}
+            {/* Indicador de mais posts */}
+            {dayPosts.length > 2 && (
+              <div className="text-xs text-gray-500 px-1.5 font-medium">
+                +{dayPosts.length - 2} mais
+              </div>
+            )}
+          </div>
+
+          {/* Contador de posts (canto inferior direito) */}
+          {dayPosts.length > 0 && (
+            <div className="absolute bottom-1 right-1 bg-[#8c52ff] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
+              {dayPosts.length}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return calendarDays;
+  };
+
+  // Estatísticas
+  const stats = useMemo(() => {
+    const published = filteredPosts.filter(p => p.type === 'published').length;
+    const scheduled = filteredPosts.filter(p => p.type === 'scheduled').length;
+    const total = filteredPosts.length;
+    
+    // Estatísticas por dia do mês
+    const postsByDay: Record<number, any[]> = {};
+    const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
+    const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
+    const daysInMonth = lastDayOfMonth.getDate();
+    
+    for (let day = 1; day <= daysInMonth; day++) {
+      postsByDay[day] = getPostsForDay(day);
+    }
+    
+    const daysWithPosts = Object.values(postsByDay).filter(posts => posts.length > 0).length;
+    const avgPostsPerDay = daysWithPosts > 0 ? (total / daysWithPosts).toFixed(1) : '0';
+    
+    return { 
+      published, 
+      scheduled, 
+      total, 
+      daysWithPosts, 
+      avgPostsPerDay,
+      postsByDay 
+    };
+  }, [filteredPosts, currentYear, currentMonth, getPostsForDay]);
+
+  // Log para debugging
+  useEffect(() => {
+    console.log('📅 Calendário atualizado:', {
+      posts: allPosts.length,
+      filteredPosts: filteredPosts.length,
+      selectedSite: selectedSiteId,
+      currentMonth: `${monthNames[currentMonth]} ${currentYear}`,
+      selectedDay: selectedDay
+    });
+  }, [allPosts.length, filteredPosts.length, selectedSiteId, currentMonth, currentYear, selectedDay, monthNames]);
+
+  return (
+    <div className="space-y-8">
+      {/* Header - Padronizado com estilo das outras páginas */}
+      <div className="flex justify-between items-end">
+        <div className="flex-1">
+          <h1 className="font-poppins text-2xl font-semibold text-foreground mb-2">
+            Calendário de Conteúdo
+          </h1>
+          <p className="font-montserrat text-muted-foreground">
+            Visualize e gerencie todos os seus artigos publicados e agendados em uma visão macro mensal
+          </p>
+        </div>
+      </div>
+
+      {/* Estatísticas - Padronizado com estilo das Ações Rápidas */}
+      <Card className="border-border bg-card">
+        <CardHeader className="pb-4">
+          <CardTitle className="font-poppins text-lg font-medium text-foreground flex items-center gap-2">
+            <BarChart3 size={20} style={{ color: '#8c52ff' }} />
+            Estatísticas do Calendário
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
+                  <CalendarIcon size={20} style={{ color: '#8c52ff' }} />
+                </div>
+                <div className="flex-1">
+                  <p className="font-montserrat text-sm text-muted-foreground">Total de Posts</p>
+                  <p className="font-poppins text-xl font-medium text-foreground">{stats.total}</p>
+                  <p className="font-montserrat text-xs text-muted-foreground">
+                    No período selecionado
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
+                  <CheckCircle size={20} style={{ color: '#8c52ff' }} />
+                </div>
+                <div className="flex-1">
+                  <p className="font-montserrat text-sm text-muted-foreground">Publicados</p>
+                  <p className="font-poppins text-xl font-medium text-green-600">{stats.published}</p>
+                  <p className="font-montserrat text-xs text-muted-foreground">
+                    Artigos online
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center">
+                  <Clock size={20} style={{ color: '#8c52ff' }} />
+                </div>
+                <div className="flex-1">
+                  <p className="font-montserrat text-sm text-muted-foreground">Agendados</p>
+                  <p className="font-poppins text-xl font-medium text-amber-600">{stats.scheduled}</p>
+                  <p className="font-montserrat text-xs text-muted-foreground">
+                    Aguardando publicação
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Controls */}
+      <Card className="border-border bg-card">
+        <CardContent className="p-6">
+          <div className="flex flex-col lg:flex-row gap-6 items-start lg:items-center justify-between">
+            {/* Month Navigation */}
+            <div className="flex items-center gap-4">
+              <Button
+                onClick={() => navigateMonth('prev')}
+                className="h-11 px-4 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              
+              <div className="text-center min-w-48">
+                <h2 className="font-poppins text-xl text-foreground">
+                  {monthNames[currentMonth]} {currentYear}
+                </h2>
+              </div>
+              
+              <Button
+                onClick={() => navigateMonth('next')}
+                className="h-11 px-4 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+
+              <Button
+                onClick={goToToday}
+                className="h-11 px-4 text-white font-montserrat"
+                style={{ backgroundColor: '#8c52ff' }}
+              >
+                Hoje
+              </Button>
+            </div>
+
+            {/* Filters */}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
+                  <Filter size={16} className="text-gray-600" />
+                </div>
+                <Label className="font-montserrat font-medium text-foreground">Filtrar por Site</Label>
+              </div>
+              
+              <Select value={selectedSiteId.toString()} onValueChange={(value) => handleFilterChange('site', value === 'all' ? 'all' : parseInt(value))}>
+                <SelectTrigger className="w-48 h-11">
+                  <SelectValue placeholder="Site" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Sites</SelectItem>
+                  {availableSites.map(site => (
+                    <SelectItem key={site.id} value={site.id.toString()}>
+                      {site.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {selectedSiteId !== 'all' && (
+                <Button 
+                  onClick={() => handleFilterChange('site', 'all')}
+                  className="h-11 px-4 bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400"
+                >
+                  <XCircle size={16} className="mr-2" />
+                  Limpar
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Content */}
+      <div className="space-y-8">
+        {/* Calendar always visible */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Calendar */}
+          <div className="lg:col-span-3">
+            <Card className="border-border bg-card">
+              <CardContent className="p-0">
+                {/* Calendar Header */}
+                <div className="grid grid-cols-7 border-b border-gray-200">
+                  {dayNames.map(day => (
+                    <div key={day} className="h-12 flex items-center justify-center bg-gray-50 border-r border-gray-200 last:border-r-0">
+                      <span className="font-poppins font-medium text-gray-700">{day}</span>
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Calendar Grid */}
+                <div className="grid grid-cols-7">
+                  {/* Previous month days */}
+                  {Array.from({ length: firstDayOfWeek }, (_, i) => {
+                    const day = new Date(currentYear, currentMonth - 1, daysInPrevMonth - firstDayOfWeek + i + 1);
+                    return (
+                      <div key={`prev-${i}`} className="h-24 bg-gray-50 border border-gray-100 opacity-40">
+                        <div className="p-2 h-full flex flex-col">
+                          <span className="text-xs text-gray-400 font-medium">{day.getDate()}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  
+                  {/* Current month days */}
+                  {Array.from({ length: daysInMonth }, (_, i) => {
+                    const day = i + 1;
+                    const date = new Date(currentYear, currentMonth, day);
+                    const isToday = date.toDateString() === today.toDateString();
+                    const dayPosts = getPostsForDay(day);
+                    
+                    return (
+                      <div
+                        key={day}
+                        className={`
+                          h-24 border border-gray-200 p-2 cursor-pointer transition-all duration-200 overflow-hidden relative
+                          ${isToday 
+                            ? 'bg-[#8c52ff]/10 border-[#8c52ff] ring-2 ring-[#8c52ff]/20' 
+                            : dayPosts.length > 0 
+                              ? 'bg-white hover:bg-gray-50 hover:border-gray-300'
+                              : 'bg-white hover:bg-gray-50 hover:border-gray-300'
+                          }
+                          ${dayPosts.length > 0 ? 'border-l-4 border-l-[#8c52ff]' : ''}
+                        `}
+                        onClick={() => dayPosts.length > 0 && setSelectedDay(day)}
+                      >
+                        <div className="flex flex-col h-full">
+                          <span 
+                            className={`text-sm font-medium mb-1 ${
+                              isToday 
+                                ? 'text-[#8c52ff]' 
+                                : 'text-gray-700'
+                            }`}
+                          >
+                            {day}
+                          </span>
+                          
+                          {/* Posts indicators */}
+                          {dayPosts.length > 0 && (
+                            <div className="flex-1 space-y-0.5">
+                              {dayPosts.slice(0, 2).map((post, idx) => (
+                                <div
+                                  key={idx}
+                                  className={`text-xs p-1 rounded truncate ${
+                                    post.status === 'published' 
+                                      ? 'bg-green-100 text-green-700' 
+                                      : 'bg-amber-100 text-amber-700'
+                                  }`}
+                                >
+                                  {post.titulo}
+                                </div>
+                              ))}
+                              {dayPosts.length > 2 && (
+                                <div className="text-xs text-gray-500">
+                                  +{dayPosts.length - 2} mais
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Today indicator */}
+                        {isToday && (
+                          <div className="absolute top-2 right-2">
+                            <div className="text-xs text-[#8c52ff] font-medium mb-1">Hoje</div>
+                          </div>
+                        )}
+                        
+                        {/* Post count badge */}
+                        {dayPosts.length > 0 && (
+                          <div className="absolute bottom-1 right-1 bg-[#8c52ff] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-medium">
+                            {dayPosts.length}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  
+                  {/* Next month days */}
+                  {Array.from({ length: 42 - firstDayOfWeek - daysInMonth }, (_, i) => {
+                    const day = new Date(currentYear, currentMonth + 1, i + 1);
+                    return (
+                      <div key={`next-${i}`} className="h-24 bg-gray-50 border border-gray-100 opacity-40">
+                        <div className="p-2 h-full flex flex-col">
+                          <span className="text-xs text-gray-400 font-medium">{day.getDate()}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Legend - Always visible on the right side */}
+          <div className="lg:col-span-1">
+            <Card className="border-border bg-card">
+              <CardContent className="p-6">
+                <h3 className="font-poppins font-semibold text-foreground mb-4">Legenda</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-green-100 border border-green-200 rounded"></div>
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    </div>
+                    <span className="font-montserrat text-sm text-gray-600">Posts Publicados</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-amber-100 border border-amber-200 rounded"></div>
+                      <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                    </div>
+                    <span className="font-montserrat text-sm text-gray-600">Posts Agendados</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 bg-[#8c52ff]/10 border border-[#8c52ff]/20 rounded"></div>
+                    <span className="font-montserrat text-sm text-gray-600">Dia Atual</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-4 bg-[#8c52ff] rounded-full"></div>
+                    <span className="font-montserrat text-sm text-gray-600">Borda: Dias com Posts</span>
+                  </div>
+                </div>
+                
+                {/* Empty state message in legend when no posts */}
+                {filteredPosts.length === 0 && (
+                  <div className="mt-6 pt-6 border-t border-gray-200">
+                    <div className="text-center">
+                      <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                        <CalendarIcon size={16} className="text-gray-400" />
+                      </div>
+                      <p className="font-montserrat text-sm text-gray-600 mb-4">
+                        {selectedSiteId === 'all' ? 'Nenhum conteúdo encontrado' : 'Nenhum conteúdo para este site'}
+                      </p>
+                      <Button
+                        onClick={() => window.location.hash = 'articles'}
+                        className="bg-[#8c52ff] hover:bg-[#7a47e6] text-white text-sm h-8 px-3"
+                      >
+                        Criar Conteúdo
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Selected Day Posts */}
+        {selectedDay && (
+              <Card className="border-border bg-card">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="font-poppins text-xl font-semibold text-foreground">
+                      Posts de {selectedDay} de {monthNames[currentMonth]}
+                    </h3>
+                    <div className="flex items-center gap-3">
+                      <Badge className="bg-[#8c52ff]/10 text-[#8c52ff] px-2 py-0.5 rounded text-sm">
+                        {selectedDayPosts.length} post(s)
+                      </Badge>
+                      <Button
+                        onClick={() => setSelectedDay(null)}
+                        className="bg-white border border-gray-300 text-gray-500 hover:bg-gray-50 hover:text-gray-700 p-2 rounded"
+                      >
+                        <XCircle size={16} />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {selectedDayPosts.length === 0 ? (
+                    <div className="text-center py-8">
+                      <CalendarIcon size={48} className="mx-auto text-gray-300 mb-4" />
+                      <h4 className="font-poppins font-medium text-gray-700 mb-2">
+                        Nenhum post neste dia
+                      </h4>
+                      <p className="font-montserrat text-gray-500">
+                        Não há artigos publicados ou agendados para esta data.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {selectedDayPosts.map(post => (
+                        <Card key={post.id} className="border-border bg-card hover:shadow-sm transition-colors">
+                          <CardContent className="p-4">
+                            <div className="flex items-start gap-4">
+                              {/* Content */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className="flex items-center text-sm text-gray-500">
+                                    <Monitor size={14} className="mr-1" />
+                                    {getSiteName(post.siteId)}
+                                  </div>
+                                  
+                                  <Badge className={`text-xs ${
+                                    post.type === 'published' 
+                                      ? 'bg-green-50 text-green-700 border-green-200' 
+                                      : 'bg-amber-50 text-amber-700 border-amber-200'
+                                  }`}>
+                                    {post.type === 'published' ? (
+                                      <>
+                                        <CheckCircle size={10} className="mr-1" />
+                                        Publicado
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Clock size={10} className="mr-1" />
+                                        Agendado
+                                      </>
+                                    )}
+                                  </Badge>
+                                </div>
+
+                                <h4 className="font-poppins font-medium text-foreground mb-2 line-clamp-2 leading-tight">
+                                  {post.title}
+                                </h4>
+
+                                <div className="flex items-center gap-3 mb-3">
+                                  <span className="text-sm text-gray-600">
+                                    {post.type === 'published' ? 'Publicado em' : 'Agendado para'}: {' '}
+                                    {new Date(post.date).toLocaleString('pt-BR')}
+                                  </span>
+                                </div>
+
+                                <div className="text-sm text-gray-500">
+                                  {countWords(post.content)} palavras
+                                </div>
+                              </div>
+
+                              {/* Actions */}
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <Button
+                                  onClick={() => openArticleInNewTab(post)}
+                                  className="h-10 px-4 bg-green-600 hover:bg-green-700 text-white shadow-sm"
+                                >
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  Visualizar
+                                </Button>
+
+                                {post.url && (
+                                  <Button
+                                    onClick={() => window.open(post.url, '_blank')}
+                                    className="h-10 px-4 bg-[#8c52ff] hover:bg-[#7a47e6] text-white shadow-sm"
+                                  >
+                                    <ExternalLink className="h-4 w-4 mr-2" />
+                                    Ver Online
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Legend */}
+            <Card className="border-border bg-card">
+              <CardContent className="p-6">
+                <h3 className="font-poppins font-semibold text-foreground mb-4">Legenda</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-green-100 border border-green-200 rounded"></div>
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    </div>
+                    <span className="font-montserrat text-sm text-gray-600">Posts Publicados</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1">
+                      <div className="w-3 h-3 bg-amber-100 border border-amber-200 rounded"></div>
+                      <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                    </div>
+                    <span className="font-montserrat text-sm text-gray-600">Posts Agendados</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-4 h-4 bg-[#8c52ff]/10 border border-[#8c52ff]/20 rounded"></div>
+                    <span className="font-montserrat text-sm text-gray-600">Dia Atual</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-4 bg-[#8c52ff] rounded-full"></div>
+                    <span className="font-montserrat text-sm text-gray-600">Borda: Dias com Posts</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Resumo Mensal */}
+            {stats.total > 0 && (
+              <Card className="border-border bg-card" style={{ backgroundColor: 'rgba(140, 82, 255, 0.05)' }}>
+                <CardContent className="p-6">
+                  <h3 className="font-poppins font-semibold text-foreground mb-6 flex items-center gap-2">
+                    <Monitor size={20} style={{ color: '#8c52ff' }} />
+                    Resumo de {monthNames[currentMonth]} {currentYear}
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    <div className="text-center p-4 bg-white/60 rounded-lg border border-purple-100">
+                      <div className="font-poppins text-2xl text-[#8c52ff] mb-1">{stats.total}</div>
+                      <div className="font-montserrat text-sm text-gray-600">Total de Posts</div>
+                    </div>
+                    <div className="text-center p-4 bg-white/60 rounded-lg border border-purple-100">
+                      <div className="font-poppins text-2xl text-green-600 mb-1">{stats.daysWithPosts}</div>
+                      <div className="font-montserrat text-sm text-gray-600">Dias com Conteúdo</div>
+                    </div>
+                    <div className="text-center p-4 bg-white/60 rounded-lg border border-purple-100">
+                      <div className="font-poppins text-2xl text-amber-600 mb-1">{stats.avgPostsPerDay}</div>
+                      <div className="font-montserrat text-sm text-gray-600">Média por Dia Ativo</div>
+                    </div>
+                    <div className="text-center p-4 bg-white/60 rounded-lg border border-purple-100">
+                      <div className="font-poppins text-2xl text-blue-600 mb-1">
+                        {selectedSiteId === 'all' ? availableSites.length : '1'}
+                      </div>
+                      <div className="font-montserrat text-sm text-gray-600">
+                        {selectedSiteId === 'all' ? 'Sites Ativos' : 'Site Selecionado'}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+        </div>
+      </div>
+    </div>
+  );
+}

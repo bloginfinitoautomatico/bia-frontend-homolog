@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Teste: Calendário com Data de Agendamento Correta</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-results {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #8c52ff;
+        }
+        .button {
+            background: #8c52ff;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px 5px;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s;
+        }
+        .button:hover {
+            background: #7a47e6;
+            transform: translateY(-2px);
+        }
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .day {
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            min-height: 80px;
+            position: relative;
+        }
+        .day.has-posts {
+            border-left: 4px solid #8c52ff;
+            background: #f9f9ff;
+        }
+        .day-number {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .post-indicator {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 2px;
+        }
+        .post-published {
+            color: #28a745;
+        }
+        .post-scheduled {
+            color: #ffc107;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 Teste: Calendário com Agendamentos Corretos</h1>
+            <p>Verificação da correção da lógica de datas dos posts agendados</p>
+        </div>
+
+        <div class="test-results">
+            <h3>🧪 Status dos Testes</h3>
+            <button onclick="testarAgendamentos()" class="button">🔄 Testar Agendamentos</button>
+            <button onclick="testarCalendario()" class="button">📅 Testar Calendário</button>
+            <div id="resultados"></div>
+        </div>
+
+        <div class="stats" id="stats" style="display: none;">
+            <div class="stat-card">
+                <h4>Total de Artigos</h4>
+                <div id="totalArtigos">-</div>
+            </div>
+            <div class="stat-card">
+                <h4>Posts Publicados</h4>
+                <div id="postsPublicados">-</div>
+            </div>
+            <div class="stat-card">
+                <h4>Posts Agendados</h4>
+                <div id="postsAgendados">-</div>
+            </div>
+            <div class="stat-card">
+                <h4>Data mais Próxima</h4>
+                <div id="proximaData">-</div>
+            </div>
+        </div>
+
+        <div id="calendar" class="calendar" style="display: none;"></div>
+
+        <div id="detalhes" style="display: none;">
+            <h3>📊 Detalhes dos Agendamentos</h3>
+            <div id="listaAgendamentos"></div>
+        </div>
+    </div>
+
+    <script>
+        const TOKEN = localStorage.getItem('auth_token') || '200|YSHrHcep1okOtfTwhLNoXtp7ShS8How1oU1pDm2K87cb22fb';
+        const API_BASE = 'http://localhost:8000/api';
+
+        let agendamentosData = [];
+        let artigosData = [];
+
+        async function testarAgendamentos() {
+            const resultsDiv = document.getElementById('resultados');
+            resultsDiv.innerHTML = '<p>🔄 Carregando dados...</p>';
+
+            try {
+                // 1. Buscar artigos
+                const artigosResponse = await fetch(`${API_BASE}/artigos`, {
+                    headers: {
+                        'Authorization': `Bearer ${TOKEN}`,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (!artigosResponse.ok) throw new Error(`Artigos API: ${artigosResponse.status}`);
+                const artigosResult = await artigosResponse.json();
+                artigosData = artigosResult.data?.data || artigosResult.data || [];
+
+                // 2. Buscar agendamentos
+                const agendamentosResponse = await fetch(`${API_BASE}/agendamentos`, {
+                    headers: {
+                        'Authorization': `Bearer ${TOKEN}`,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (!agendamentosResponse.ok) throw new Error(`Agendamentos API: ${agendamentosResponse.status}`);
+                const agendamentosResult = await agendamentosResponse.json();
+                agendamentosData = agendamentosResult.data?.data || agendamentosResult.data || [];
+
+                // 3. Análise dos dados
+                const artigosPublicados = artigosData.filter(a => a.status === 'publicado').length;
+                const artigosAgendados = artigosData.filter(a => a.status === 'agendado').length;
+                const agendamentosPendentes = agendamentosData.filter(a => a.status === 'pendente').length;
+                const agendamentosPublicados = agendamentosData.filter(a => a.status === 'publicado').length;
+
+                // 4. Verificar discrepâncias
+                const problemas = [];
+                if (artigosAgendados !== agendamentosPendentes && artigosAgendados !== (agendamentosPendentes + agendamentosPublicados)) {
+                    problemas.push(`❌ Discrepância: ${artigosAgendados} artigos "agendados" vs ${agendamentosPendentes} agendamentos "pendentes"`);
+                }
+
+                // 5. Encontrar próxima data de publicação
+                const proximasPublicacoes = agendamentosData
+                    .filter(a => a.status === 'pendente')
+                    .map(a => ({
+                        titulo: a.artigo?.titulo || 'Sem título',
+                        data: new Date(a.data_agendamento),
+                        dataFormatada: new Date(a.data_agendamento).toLocaleString('pt-BR')
+                    }))
+                    .sort((a, b) => a.data.getTime() - b.data.getTime());
+
+                // 6. Exibir resultados
+                document.getElementById('totalArtigos').textContent = artigosData.length;
+                document.getElementById('postsPublicados').textContent = artigosPublicados;
+                document.getElementById('postsAgendados').textContent = agendamentosPendentes;
+                document.getElementById('proximaData').textContent = proximasPublicacoes.length > 0 ? 
+                    proximasPublicacoes[0].dataFormatada : 'Nenhum';
+
+                resultsDiv.innerHTML = `
+                    <div style="background: #e8f5e8; padding: 15px; border-radius: 5px; margin: 10px 0;">
+                        <h4>✅ Dados Carregados com Sucesso</h4>
+                        <p><strong>Total de artigos:</strong> ${artigosData.length}</p>
+                        <p><strong>Artigos publicados (status):</strong> ${artigosPublicados}</p>
+                        <p><strong>Artigos agendados (status):</strong> ${artigosAgendados}</p>
+                        <p><strong>Agendamentos pendentes:</strong> ${agendamentosPendentes}</p>
+                        <p><strong>Agendamentos publicados:</strong> ${agendamentosPublicados}</p>
+                        ${problemas.length > 0 ? `<div style="color: #d63384; margin-top: 10px;">${problemas.join('<br>')}</div>` : ''}
+                        ${proximasPublicacoes.length > 0 ? 
+                            `<p><strong>Próxima publicação:</strong> ${proximasPublicacoes[0].titulo} em ${proximasPublicacoes[0].dataFormatada}</p>` : 
+                            '<p><strong>Próxima publicação:</strong> Nenhuma agendada</p>'
+                        }
+                    </div>
+                `;
+
+                document.getElementById('stats').style.display = 'grid';
+
+                // 7. Mostrar detalhes dos agendamentos
+                mostrarDetalhesAgendamentos();
+
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div style="background: #f8d7da; padding: 15px; border-radius: 5px; margin: 10px 0;">
+                        <h4>❌ Erro ao Carregar Dados</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function mostrarDetalhesAgendamentos() {
+            const detalhesDiv = document.getElementById('detalhes');
+            const listaDiv = document.getElementById('listaAgendamentos');
+            
+            const agendamentosDetalhados = agendamentosData.map(a => {
+                const dataAgendamento = new Date(a.data_agendamento);
+                const dataCriacao = new Date(a.created_at);
+                const diferenca = Math.ceil((dataAgendamento.getTime() - dataCriacao.getTime()) / (1000 * 60 * 60 * 24));
+                
+                return {
+                    ...a,
+                    dataAgendamentoFormatada: dataAgendamento.toLocaleString('pt-BR'),
+                    dataCriacaoFormatada: dataCriacao.toLocaleString('pt-BR'),
+                    diasDiferenca: diferenca
+                };
+            }).sort((a, b) => new Date(a.data_agendamento).getTime() - new Date(b.data_agendamento).getTime());
+
+            listaDiv.innerHTML = agendamentosDetalhados.map(a => `
+                <div style="border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 8px; background: ${a.status === 'pendente' ? '#fff3cd' : '#d4edda'};">
+                    <h5>${a.artigo?.titulo || 'Sem título'}</h5>
+                    <p><strong>Status:</strong> ${a.status}</p>
+                    <p><strong>Data de agendamento:</strong> ${a.dataAgendamentoFormatada} (${a.diasDiferenca > 0 ? `em ${a.diasDiferenca} dias` : 'hoje/passado'})</p>
+                    <p><strong>Data de criação:</strong> ${a.dataCriacaoFormatada}</p>
+                    <p><strong>Site:</strong> ${a.site?.nome || 'N/A'}</p>
+                    ${a.status === 'pendente' ? 
+                        '<span style="color: #856404;">⏰ Aguardando publicação</span>' : 
+                        '<span style="color: #155724;">✅ Já publicado</span>'
+                    }
+                </div>
+            `).join('');
+
+            detalhesDiv.style.display = 'block';
+        }
+
+        function testarCalendario() {
+            if (agendamentosData.length === 0) {
+                alert('Execute o teste de agendamentos primeiro!');
+                return;
+            }
+
+            // Criar calendário simples do mês atual
+            const agora = new Date();
+            const ano = agora.getFullYear();
+            const mes = agora.getMonth();
+            
+            // Primeiro dia do mês e último dia
+            const primeiroDia = new Date(ano, mes, 1);
+            const ultimoDia = new Date(ano, mes + 1, 0);
+            
+            // Criar grid do calendário
+            const calendarDiv = document.getElementById('calendar');
+            calendarDiv.innerHTML = '';
+            
+            // Cabeçalho dos dias da semana
+            const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+            diasSemana.forEach(dia => {
+                const header = document.createElement('div');
+                header.textContent = dia;
+                header.style.fontWeight = 'bold';
+                header.style.textAlign = 'center';
+                header.style.padding = '10px';
+                header.style.backgroundColor = '#8c52ff';
+                header.style.color = 'white';
+                calendarDiv.appendChild(header);
+            });
+
+            // Dias vazios antes do primeiro dia do mês
+            const diaSemanaInicio = primeiroDia.getDay();
+            for (let i = 0; i < diaSemanaInicio; i++) {
+                const emptyDay = document.createElement('div');
+                emptyDay.className = 'day';
+                calendarDiv.appendChild(emptyDay);
+            }
+
+            // Dias do mês
+            for (let dia = 1; dia <= ultimoDia.getDate(); dia++) {
+                const dataAtual = new Date(ano, mes, dia);
+                const dayDiv = document.createElement('div');
+                dayDiv.className = 'day';
+                
+                // Buscar posts para este dia
+                const postsHoje = agendamentosData.filter(a => {
+                    const dataAgendamento = new Date(a.data_agendamento);
+                    return dataAgendamento.getDate() === dia && 
+                           dataAgendamento.getMonth() === mes && 
+                           dataAgendamento.getFullYear() === ano;
+                });
+
+                dayDiv.innerHTML = `<div class="day-number">${dia}</div>`;
+                
+                if (postsHoje.length > 0) {
+                    dayDiv.classList.add('has-posts');
+                    postsHoje.forEach(post => {
+                        const indicator = document.createElement('div');
+                        indicator.className = `post-indicator ${post.status === 'publicado' ? 'post-published' : 'post-scheduled'}`;
+                        indicator.textContent = `${post.status === 'publicado' ? '✅' : '⏰'} ${post.artigo?.titulo?.substring(0, 20) || 'Post'}...`;
+                        dayDiv.appendChild(indicator);
+                    });
+                }
+
+                calendarDiv.appendChild(dayDiv);
+            }
+
+            calendarDiv.style.display = 'grid';
+            
+            // Scroll para o calendário
+            calendarDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Auto-executar teste ao carregar
+        window.onload = function() {
+            testarAgendamentos();
+        };
+    </script>
+</body>
+</html>

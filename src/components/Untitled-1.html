@@ -1,0 +1,47 @@
+// ...código existente...
+
+<CardHeader className="text-center pb-8 bg-gradient-to-r from-purple-600/5 via-indigo-600/5 to-blue-600/5">
+  {/* Logo com efeito hover */}
+  <div className="flex justify-center">
+    <div className="w-48 h-48 relative group cursor-pointer">
+      <div className="absolute inset-0 bg-gradient-to-r from-purple-400 to-indigo-400 rounded-full opacity-0 group-hover:opacity-20 transition-opacity duration-300 blur-xl"></div>
+      <ImageWithFallback
+        src="https://app.bloginfinitoautomatico.com.br/wp-content/uploads/2025/07/logo-bia-7.png"
+        alt="BIA - Blog Infinito Automático"
+        className="w-full h-full object-contain relative z-10 transition-transform duration-300 group-hover:scale-105"
+      />
+    </div>
+  </div>
+  
+  {/* Títulos e subtítulos atualizados */}
+  <div className="space-y-3 mt-2">
+    <h1 className="font-poppins text-3xl font-semibold text-gray-900 tracking-tight">
+      O Futuro dos Blogs Chegou!
+    </h1>
+    <p className="font-montserrat text-gray-600 font-medium">
+      Crie artigos de blog otimizados para SEO em apenas alguns cliques!
+    </p>
+    <div>
+      <span className="inline-block bg-gradient-to-r from-purple-500 to-indigo-500 text-white px-4 py-1 rounded-full font-bold text-sm shadow-sm mt-2">
+        COMECE GRÁTIS
+      </span>
+    </div>
+    {/* Features em destaque */}
+    <div className="flex items-center justify-center space-x-6 pt-2">
+      <div className="flex items-center space-x-1 text-sm text-gray-500">
+        <Shield className="w-4 h-4 text-green-500" />
+        <span className="font-montserrat">Seguro</span>
+      </div>
+      <div className="flex items-center space-x-1 text-sm text-gray-500">
+        <Zap className="w-4 h-4 text-yellow-500" />
+        <span className="font-montserrat">Rápido</span>
+      </div>
+      <div className="flex items-center space-x-1 text-sm text-gray-500">
+        <Sparkles className="w-4 h-4 text-purple-500" />
+        <span className="font-montserrat">Inteligente</span>
+      </div>
+    </div>
+  </div>
+</CardHeader>
+
+// ...código existente...

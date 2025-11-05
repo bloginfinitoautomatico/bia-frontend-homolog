@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Limpar Cache BIA</title>
+</head>
+<body>
+    <h1>Limpando cache do BIA...</h1>
+    <script>
+        // Limpar todo o localStorage
+        localStorage.clear();
+        
+        // Limpar todo o sessionStorage
+        sessionStorage.clear();
+        
+        // Mostrar mensagem
+        document.body.innerHTML = `
+            <h1>✅ Cache limpo com sucesso!</h1>
+            <p>Redirecionando para o BIA em 3 segundos...</p>
+        `;
+        
+        // Redirecionar após 3 segundos
+        setTimeout(() => {
+            window.location.href = 'http://localhost:5174';
+        }, 3000);
+    </script>
+</body>
+</html>

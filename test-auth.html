@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Autenticação - BIA</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .container { background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        button { background: #8c52ff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+        button:hover { background: #7a47e6; }
+        .result { background: white; padding: 15px; border-radius: 5px; margin-top: 10px; border-left: 4px solid #8c52ff; }
+        .error { border-left-color: #e74c3c; }
+        .success { border-left-color: #2ecc71; }
+        textarea { width: 100%; height: 200px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>🔐 Teste de Autenticação BIA</h1>
+    
+    <div class="container">
+        <h2>1. Configurar Token de Autenticação</h2>
+        <p>Token do usuário: <code>muriloparrillo@hotmail.com</code></p>
+        <button onclick="setAuthToken()">Configurar Token</button>
+        <button onclick="clearToken()">Limpar Token</button>
+        <div id="tokenResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="container">
+        <h2>2. Testar API de Artigos</h2>
+        <button onclick="testArticlesAPI()">Buscar Artigos</button>
+        <div id="articlesResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="container">
+        <h2>3. Testar Login</h2>
+        <button onclick="testLogin()">Fazer Login</button>
+        <div id="loginResult" class="result" style="display:none;"></div>
+    </div>
+
+    <script>
+        const TOKEN = '197|xNN9nNkMb3bBA0rkNoBr20RzbkDLyCujdpsBjzuXcc93abaf';
+        const API_BASE = 'http://localhost:8000/api';
+
+        function setAuthToken() {
+            localStorage.setItem('auth_token', TOKEN);
+            showResult('tokenResult', 'Token configurado com sucesso!', 'success');
+        }
+
+        function clearToken() {
+            localStorage.removeItem('auth_token');
+            showResult('tokenResult', 'Token removido', 'error');
+        }
+
+        async function testArticlesAPI() {
+            try {
+                const token = localStorage.getItem('auth_token');
+                if (!token) {
+                    showResult('articlesResult', 'Erro: Token não configurado. Configure o token primeiro.', 'error');
+                    return;
+                }
+
+                console.log('🔄 Testando API de artigos...');
+                
+                const response = await fetch(`${API_BASE}/artigos`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                console.log('📊 Status da resposta:', response.status);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log('✅ Dados recebidos:', data);
+
+                const articles = data.data?.data || data.data || [];
+                const total = data.data?.total || articles.length;
+
+                showResult('articlesResult', 
+                    `✅ Sucesso! Encontrados ${total} artigos.\n\nPrimeiros 3 artigos:\n${
+                        articles.slice(0, 3).map(art => 
+                            `• ${art.titulo} (${art.status}) - Site: ${art.site?.nome || 'N/A'}`
+                        ).join('\n')
+                    }\n\nCalendário deve exibir estes artigos corretamente.`, 
+                    'success'
+                );
+
+            } catch (error) {
+                console.error('❌ Erro na API:', error);
+                showResult('articlesResult', `❌ Erro: ${error.message}`, 'error');
+            }
+        }
+
+        async function testLogin() {
+            try {
+                console.log('🔄 Testando login...');
+                
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: 'muriloparrillo@hotmail.com',
+                        password: 'Mur@2025@#'
+                    })
+                });
+
+                console.log('📊 Status da resposta:', response.status);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                console.log('✅ Login bem-sucedido:', data);
+
+                const user = data.data?.user || data.user;
+                const token = data.data?.token || data.token;
+
+                if (token) {
+                    localStorage.setItem('auth_token', token);
+                }
+
+                showResult('loginResult', 
+                    `✅ Login realizado com sucesso!\n\nUsuário: ${user.name} (${user.email})\nToken: ${token}\n\nToken foi salvo automaticamente.`, 
+                    'success'
+                );
+
+            } catch (error) {
+                console.error('❌ Erro no login:', error);
+                showResult('loginResult', `❌ Erro no login: ${error.message}`, 'error');
+            }
+        }
+
+        function showResult(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `result ${type}`;
+            element.innerHTML = `<pre>${message}</pre>`;
+        }
+
+        // Verificar se já tem token ao carregar a página
+        window.onload = function() {
+            const token = localStorage.getItem('auth_token');
+            if (token) {
+                showResult('tokenResult', `Token já configurado: ${token.substring(0, 20)}...`, 'success');
+            }
+        };
+    </script>
+</body>
+</html>

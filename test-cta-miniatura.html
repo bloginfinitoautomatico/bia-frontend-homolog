@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🖼️ Teste: Preview CTA - Miniatura da Imagem</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 20px;
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border-radius: 10px;
+        }
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        .comparison-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 25px;
+            background: #f9f9f9;
+        }
+        .comparison-card.before {
+            border-color: #FF5722;
+            background: linear-gradient(45deg, #fff3e0, #ffccbc);
+        }
+        .comparison-card.after {
+            border-color: #4CAF50;
+            background: linear-gradient(45deg, #e8f5e8, #c8e6c9);
+        }
+        .comparison-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        .comparison-header .icon {
+            font-size: 1.5em;
+            margin-right: 10px;
+        }
+        .preview-container {
+            background: linear-gradient(45deg, #f3f8ff, #e8f4fd);
+            border: 2px dashed #2196F3;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+        .preview-old {
+            background: linear-gradient(45deg, #ffebee, #ffcdd2);
+            border: 2px dashed #f44336;
+        }
+        .miniature-container {
+            position: relative;
+            display: inline-block;
+        }
+        .miniature-image {
+            width: 128px;
+            height: 128px;
+            object-fit: cover;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            border: 2px solid #2196F3;
+        }
+        .preview-badge {
+            position: absolute;
+            bottom: -8px;
+            right: -8px;
+            background: #2196F3;
+            color: white;
+            font-size: 10px;
+            padding: 4px 8px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .old-image {
+            max-width: 100%;
+            max-height: 200px;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .feature-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 30px 0;
+        }
+        .feature-item {
+            background: rgba(76, 175, 80, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+            display: flex;
+            align-items: center;
+        }
+        .feature-item .icon {
+            font-size: 1.5em;
+            margin-right: 12px;
+        }
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .benefit-card {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .benefit-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        .improvement-summary {
+            background: linear-gradient(45deg, #e3f2fd, #bbdefb);
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 30px;
+            border: 2px solid #2196F3;
+        }
+        .example-images {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .example-preview {
+            text-align: center;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🖼️ Preview CTA - Miniatura da Imagem</h1>
+            <p>Comparação: Antes vs Depois da otimização do preview</p>
+            <p style="font-size: 0.9em; margin-top: 15px;">✅ Build realizado com sucesso em 2.64s</p>
+        </div>
+
+        <div class="comparison-grid">
+            <div class="comparison-card before">
+                <div class="comparison-header">
+                    <span class="icon">❌</span>
+                    ANTES: Imagem em Tamanho Real
+                </div>
+                <div class="preview-container preview-old">
+                    <h4>Problema: Imagem muito grande</h4>
+                    <div style="margin: 15px 0;">
+                        <img 
+                            src="https://via.placeholder.com/800x600/FF6B6B/FFFFFF?text=Imagem+Grande" 
+                            alt="Exemplo antes" 
+                            class="old-image"
+                        />
+                    </div>
+                    <p style="font-size: 0.9em; color: #666;">
+                        ⚠️ Ocupava muito espaço<br>
+                        ⚠️ Quebrava o layout<br>
+                        ⚠️ Experiência ruim
+                    </p>
+                </div>
+                <div style="margin-top: 15px;">
+                    <h5>Problemas Identificados:</h5>
+                    <ul style="text-align: left; font-size: 0.9em;">
+                        <li>Imagem com tamanho original</li>
+                        <li>Quebrava proporção do preview</li>
+                        <li>Dificultava visualização do CTA</li>
+                        <li>Layout inconsistente</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="comparison-card after">
+                <div class="comparison-header">
+                    <span class="icon">✅</span>
+                    DEPOIS: Miniatura Otimizada
+                </div>
+                <div class="preview-container">
+                    <h4>Solução: Miniatura elegante</h4>
+                    <div style="margin: 15px 0;">
+                        <div class="miniature-container">
+                            <img 
+                                src="https://via.placeholder.com/800x600/4CAF50/FFFFFF?text=Miniatura+128x128" 
+                                alt="Exemplo depois" 
+                                class="miniature-image"
+                            />
+                            <div class="preview-badge">Preview</div>
+                        </div>
+                    </div>
+                    <p style="font-size: 0.9em; color: #666;">
+                        ✅ Tamanho fixo 128x128px<br>
+                        ✅ Layout consistente<br>
+                        ✅ Experiência otimizada
+                    </p>
+                </div>
+                <div style="margin-top: 15px;">
+                    <h5>Melhorias Implementadas:</h5>
+                    <ul style="text-align: left; font-size: 0.9em;">
+                        <li>Miniatura fixa de 128x128px</li>
+                        <li>Object-fit: cover para proporção</li>
+                        <li>Badge "Preview" identificador</li>
+                        <li>Layout responsivo e elegante</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="feature-list">
+            <div class="feature-item">
+                <span class="icon">📐</span>
+                <div>
+                    <strong>Tamanho Fixo:</strong><br>
+                    128x128px sempre consistente
+                </div>
+            </div>
+            <div class="feature-item">
+                <span class="icon">🎯</span>
+                <div>
+                    <strong>Object-fit Cover:</strong><br>
+                    Mantém proporção da imagem
+                </div>
+            </div>
+            <div class="feature-item">
+                <span class="icon">🏷️</span>
+                <div>
+                    <strong>Badge Preview:</strong><br>
+                    Identificação visual clara
+                </div>
+            </div>
+            <div class="feature-item">
+                <span class="icon">💎</span>
+                <div>
+                    <strong>Design Elegante:</strong><br>
+                    Bordas arredondadas e sombra
+                </div>
+            </div>
+        </div>
+
+        <div class="benefits-grid">
+            <div class="benefit-card">
+                <div class="benefit-icon">🚀</div>
+                <h4>Performance</h4>
+                <p>Carregamento mais rápido com tamanho otimizado</p>
+            </div>
+            <div class="benefit-card">
+                <div class="benefit-icon">📱</div>
+                <h4>Responsivo</h4>
+                <p>Funciona perfeitamente em todos os dispositivos</p>
+            </div>
+            <div class="benefit-card">
+                <div class="benefit-icon">🎨</div>
+                <h4>UX Melhorada</h4>
+                <p>Interface mais limpa e profissional</p>
+            </div>
+            <div class="benefit-card">
+                <div class="benefit-icon">⚡</div>
+                <h4>Consistência</h4>
+                <p>Sempre o mesmo tamanho, independente da imagem</p>
+            </div>
+        </div>
+
+        <div class="example-images">
+            <div class="example-preview">
+                <h5>Imagem Horizontal</h5>
+                <div class="miniature-container" style="margin: 10px 0;">
+                    <img 
+                        src="https://via.placeholder.com/1200x400/3F51B5/FFFFFF?text=16:9+Widescreen" 
+                        alt="Horizontal" 
+                        class="miniature-image"
+                    />
+                    <div class="preview-badge">Preview</div>
+                </div>
+                <p style="font-size: 0.8em;">Adapta automaticamente</p>
+            </div>
+            <div class="example-preview">
+                <h5>Imagem Vertical</h5>
+                <div class="miniature-container" style="margin: 10px 0;">
+                    <img 
+                        src="https://via.placeholder.com/400x800/FF9800/FFFFFF?text=Portrait+9:16" 
+                        alt="Vertical" 
+                        class="miniature-image"
+                    />
+                    <div class="preview-badge">Preview</div>
+                </div>
+                <p style="font-size: 0.8em;">Mantém proporção</p>
+            </div>
+            <div class="example-preview">
+                <h5>Imagem Quadrada</h5>
+                <div class="miniature-container" style="margin: 10px 0;">
+                    <img 
+                        src="https://via.placeholder.com/600x600/E91E63/FFFFFF?text=1:1+Square" 
+                        alt="Quadrada" 
+                        class="miniature-image"
+                    />
+                    <div class="preview-badge">Preview</div>
+                </div>
+                <p style="font-size: 0.8em;">Encaixe perfeito</p>
+            </div>
+            <div class="example-preview">
+                <h5>Imagem Pequena</h5>
+                <div class="miniature-container" style="margin: 10px 0;">
+                    <img 
+                        src="https://via.placeholder.com/200x200/795548/FFFFFF?text=Small+Image" 
+                        alt="Pequena" 
+                        class="miniature-image"
+                    />
+                    <div class="preview-badge">Preview</div>
+                </div>
+                <p style="font-size: 0.8em;">Redimensiona adequadamente</p>
+            </div>
+        </div>
+
+        <div class="improvement-summary">
+            <h3>📋 Resumo das Melhorias</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-top: 20px;">
+                <div>
+                    <h4>🔧 Implementação Técnica:</h4>
+                    <ul>
+                        <li><code>width: 128px</code> - Largura fixa</li>
+                        <li><code>height: 128px</code> - Altura fixa</li>
+                        <li><code>object-fit: cover</code> - Proporção mantida</li>
+                        <li><code>border-radius: 8px</code> - Bordas arredondadas</li>
+                        <li><code>box-shadow</code> - Sombra elegante</li>
+                    </ul>
+                </div>
+                <div>
+                    <h4>✨ Benefícios Visuais:</h4>
+                    <ul>
+                        <li>Layout sempre consistente</li>
+                        <li>Preview profissional</li>
+                        <li>Identificação clara com badge</li>
+                        <li>Adaptação a qualquer imagem</li>
+                        <li>Experiência do usuário otimizada</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 40px; padding: 20px; background: #e8f5e8; border-radius: 10px;">
+            <h3 style="color: #2e7d32; margin-bottom: 15px;">🎉 Miniatura CTA Implementada com Sucesso!</h3>
+            <p style="color: #388e3c; font-size: 1.1em;">
+                O preview da imagem do CTA agora exibe uma miniatura elegante de 128x128px,<br>
+                mantendo a consistência visual e melhorando a experiência do usuário.
+            </p>
+            <p style="color: #666; font-size: 0.9em; margin-top: 15px;">
+                Build realizado com sucesso • Otimização visual implementada • Pronto para uso
+            </p>
+        </div>
+    </div>
+</body>
+</html>

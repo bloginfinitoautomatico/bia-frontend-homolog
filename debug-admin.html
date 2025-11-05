@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Admin BIA</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .result { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+        button { padding: 10px 20px; margin: 5px; background: #8B5FBF; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #7A4F9A; }
+        input { padding: 8px; margin: 5px; width: 300px; border: 1px solid #ccc; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Debug Admin BIA</h1>
+        
+        <div>
+            <h3>1. Verificar localStorage</h3>
+            <button onclick="checkLocalStorage()">Verificar Token</button>
+            <div id="localStorage-result" class="result"></div>
+        </div>
+
+        <div>
+            <h3>2. Fazer Login</h3>
+            <input type="email" id="email" placeholder="Email" value="dev@bia.com">
+            <input type="password" id="password" placeholder="Senha" value="12345678">
+            <br>
+            <button onclick="doLogin()">Login</button>
+            <div id="login-result" class="result"></div>
+        </div>
+
+        <div>
+            <h3>3. Testar Stats Admin</h3>
+            <button onclick="testStats()">Testar Estatísticas</button>
+            <div id="stats-result" class="result"></div>
+        </div>
+
+        <div>
+            <h3>4. Testar Users Admin</h3>
+            <button onclick="testUsers()">Testar Usuários</button>
+            <div id="users-result" class="result"></div>
+        </div>
+
+        <div>
+            <h3>5. Usar Token Manual</h3>
+            <input type="text" id="manual-token" placeholder="Token manual" value="282|85pI5y7EPHHgFOFUYmN6fKNpB7bQ1PaBBnsslvTa26881e69">
+            <br>
+            <button onclick="setManualToken()">Definir Token</button>
+            <div id="manual-result" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://127.0.0.1:8000';
+
+        function checkLocalStorage() {
+            const token = localStorage.getItem('token');
+            const user = localStorage.getItem('user');
+            
+            document.getElementById('localStorage-result').innerHTML = `
+                <strong>Token:</strong> ${token ? token.substring(0, 30) + '...' : 'Não encontrado'}<br>
+                <strong>User:</strong> ${user ? JSON.stringify(JSON.parse(user), null, 2) : 'Não encontrado'}
+            `;
+        }
+
+        async function doLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    localStorage.setItem('token', data.data.token);
+                    localStorage.setItem('user', JSON.stringify(data.data.user));
+                    
+                    document.getElementById('login-result').className = 'result success';
+                    document.getElementById('login-result').innerHTML = `
+                        <strong>Login realizado com sucesso!</strong><br>
+                        Token: ${data.data.token.substring(0, 30)}...<br>
+                        Usuário: ${data.data.user.name} (${data.data.user.email})
+                    `;
+                } else {
+                    document.getElementById('login-result').className = 'result error';
+                    document.getElementById('login-result').innerHTML = `
+                        <strong>Erro no login:</strong> ${data.message || 'Erro desconhecido'}
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('login-result').className = 'result error';
+                document.getElementById('login-result').innerHTML = `
+                    <strong>Erro de conexão:</strong> ${error.message}
+                `;
+            }
+        }
+
+        async function testStats() {
+            const token = localStorage.getItem('token');
+            
+            if (!token) {
+                document.getElementById('stats-result').className = 'result error';
+                document.getElementById('stats-result').innerHTML = 'Token não encontrado. Faça login primeiro.';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/stats`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const data = await response.text();
+                
+                if (response.ok) {
+                    document.getElementById('stats-result').className = 'result success';
+                    document.getElementById('stats-result').innerHTML = `
+                        <strong>Stats carregadas com sucesso!</strong><br>
+                        <pre>${data}</pre>
+                    `;
+                } else {
+                    document.getElementById('stats-result').className = 'result error';
+                    document.getElementById('stats-result').innerHTML = `
+                        <strong>Erro ${response.status}:</strong> ${data}
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('stats-result').className = 'result error';
+                document.getElementById('stats-result').innerHTML = `
+                    <strong>Erro de conexão:</strong> ${error.message}
+                `;
+            }
+        }
+
+        async function testUsers() {
+            const token = localStorage.getItem('token');
+            
+            if (!token) {
+                document.getElementById('users-result').className = 'result error';
+                document.getElementById('users-result').innerHTML = 'Token não encontrado. Faça login primeiro.';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/users`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                });
+
+                const data = await response.text();
+                
+                if (response.ok) {
+                    document.getElementById('users-result').className = 'result success';
+                    document.getElementById('users-result').innerHTML = `
+                        <strong>Usuários carregados com sucesso!</strong><br>
+                        <pre>${data.substring(0, 500)}...</pre>
+                    `;
+                } else {
+                    document.getElementById('users-result').className = 'result error';
+                    document.getElementById('users-result').innerHTML = `
+                        <strong>Erro ${response.status}:</strong> ${data}
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('users-result').className = 'result error';
+                document.getElementById('users-result').innerHTML = `
+                    <strong>Erro de conexão:</strong> ${error.message}
+                `;
+            }
+        }
+
+        function setManualToken() {
+            const token = document.getElementById('manual-token').value;
+            localStorage.setItem('token', token);
+            
+            document.getElementById('manual-result').className = 'result success';
+            document.getElementById('manual-result').innerHTML = `Token definido: ${token.substring(0, 30)}...`;
+        }
+
+        // Verificar automaticamente ao carregar
+        window.onload = function() {
+            checkLocalStorage();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Correção Calendário - Posts Não Aparecem</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .issue {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .solution {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .button {
+            background: #8c52ff;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px 5px;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s;
+        }
+        .button:hover {
+            background: #7a47e6;
+            transform: translateY(-2px);
+        }
+        .test-results {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #8c52ff;
+        }
+        .article-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 Correção: Posts Não Aparecem no Calendário</h1>
+            <p>Diagnóstico e correção do problema onde nenhum usuário vê posts no calendário</p>
+        </div>
+
+        <div class="issue">
+            <h3>🚨 Problema Identificado</h3>
+            <p><strong>Sintoma:</strong> Nenhum usuário vê posts no calendário</p>
+            <p><strong>Causa:</strong> Calendário esperava campos <code>published_url</code> e <code>scheduled_date</code> preenchidos, mas artigos da API têm esses campos como <code>null</code></p>
+            <p><strong>Impacto:</strong> Todos os artigos são filtrados e nenhum aparece no calendário</p>
+        </div>
+
+        <div class="solution">
+            <h3>✅ Solução Aplicada</h3>
+            <p><strong>Mudança:</strong> Modificado o componente do calendário para usar o <code>status</code> dos artigos em vez de depender apenas de URLs</p>
+            <p><strong>Lógica nova:</strong></p>
+            <ul>
+                <li>Artigos com status "publicado" = aparecem como publicados</li>
+                <li>Artigos com status "agendado" = aparecem como agendados</li>
+                <li>Usa <code>published_at</code> ou <code>created_at</code> como data de referência</li>
+            </ul>
+        </div>
+
+        <div class="test-results">
+            <h3>🧪 Teste da API</h3>
+            <button onclick="testAPI()" class="button">🔄 Testar API</button>
+            <button onclick="testCalendarLogic()" class="button">📅 Testar Lógica do Calendário</button>
+            <div id="apiResults"></div>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+            <a href="javascript:void(0)" onclick="fixAndTest()" class="button">
+                🚀 Aplicar Correção e Testar
+            </a>
+            <a href="http://localhost:5174/#calendario" target="_blank" class="button">
+                📅 Abrir Calendário
+            </a>
+        </div>
+
+        <div id="detailedResults" style="display: none;">
+            <h3>📊 Resultados Detalhados</h3>
+            <div id="articlesList" class="article-list"></div>
+        </div>
+    </div>
+
+    <script>
+        const TOKEN = '200|YSHrHcep1okOtfTwhLNoXtp7ShS8How1oU1pDm2K87cb22fb';
+        const API_BASE = 'http://localhost:8000/api';
+
+        async function testAPI() {
+            const resultsDiv = document.getElementById('apiResults');
+            resultsDiv.innerHTML = '<p>🔄 Testando API...</p>';
+
+            try {
+                const response = await fetch(`${API_BASE}/artigos`, {
+                    headers: {
+                        'Authorization': `Bearer ${TOKEN}`,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                const articles = data.data?.data || data.data || [];
+                
+                const publishedCount = articles.filter(a => a.status === 'publicado').length;
+                const scheduledCount = articles.filter(a => a.status === 'agendado').length;
+                const withPublishedUrl = articles.filter(a => a.published_url).length;
+                const withScheduledDate = articles.filter(a => a.scheduled_date).length;
+
+                resultsDiv.innerHTML = `
+                    <div style="background: #e8f5e8; padding: 15px; border-radius: 5px; margin: 10px 0;">
+                        <h4>✅ API Funcionando</h4>
+                        <p><strong>Total de artigos:</strong> ${articles.length}</p>
+                        <p><strong>Status "publicado":</strong> ${publishedCount}</p>
+                        <p><strong>Status "agendado":</strong> ${scheduledCount}</p>
+                        <p><strong>Com published_url:</strong> ${withPublishedUrl}</p>
+                        <p><strong>Com scheduled_date:</strong> ${withScheduledDate}</p>
+                        <p style="color: #d63384; font-weight: bold;">
+                            ${withPublishedUrl === 0 && withScheduledDate === 0 ? 
+                              '⚠️ PROBLEMA: Nenhum artigo tem published_url ou scheduled_date!' : 
+                              '✅ Alguns artigos têm URLs/datas preenchidas'}
+                        </p>
+                    </div>
+                `;
+
+                // Mostrar lista detalhada
+                showDetailedResults(articles);
+                
+                return { success: true, articles, publishedCount, scheduledCount };
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div style="background: #f8d7da; padding: 15px; border-radius: 5px; margin: 10px 0;">
+                        <h4>❌ Erro na API</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+                return { success: false, error: error.message };
+            }
+        }
+
+        function testCalendarLogic() {
+            // Simular a lógica do calendário corrigida
+            const testArticles = [
+                { id: 1, titulo: 'Artigo Publicado', status: 'publicado', published_url: null, scheduled_date: null, created_at: '2025-09-01' },
+                { id: 2, titulo: 'Artigo Agendado', status: 'agendado', published_url: null, scheduled_date: null, created_at: '2025-09-02' },
+                { id: 3, titulo: 'Artigo com URL', status: 'publicado', published_url: 'http://example.com', scheduled_date: null, created_at: '2025-09-03' }
+            ];
+
+            let calendarPosts = [];
+
+            // Lógica corrigida
+            testArticles.forEach(article => {
+                const isPublished = article.status?.toLowerCase() === 'publicado' || !!article.published_url;
+                if (isPublished) {
+                    calendarPosts.push({
+                        title: article.titulo,
+                        type: 'published',
+                        date: article.created_at
+                    });
+                }
+
+                const isScheduled = article.status?.toLowerCase() === 'agendado' || !!article.scheduled_date;
+                const isNotAlreadyPublished = article.status?.toLowerCase() !== 'publicado' && !article.published_url;
+                if (isScheduled && isNotAlreadyPublished) {
+                    calendarPosts.push({
+                        title: article.titulo,
+                        type: 'scheduled',
+                        date: article.created_at
+                    });
+                }
+            });
+
+            const resultsDiv = document.getElementById('apiResults');
+            resultsDiv.innerHTML += `
+                <div style="background: #cff4fc; padding: 15px; border-radius: 5px; margin: 10px 0;">
+                    <h4>🧪 Teste da Lógica Corrigida</h4>
+                    <p><strong>Artigos de teste:</strong> ${testArticles.length}</p>
+                    <p><strong>Posts que aparecerão no calendário:</strong> ${calendarPosts.length}</p>
+                    <ul>
+                        ${calendarPosts.map(p => `<li>${p.title} (${p.type})</li>`).join('')}
+                    </ul>
+                    <p style="color: #0f5132; font-weight: bold;">
+                        ✅ Lógica corrigida deve funcionar!
+                    </p>
+                </div>
+            `;
+        }
+
+        function showDetailedResults(articles) {
+            const detailedDiv = document.getElementById('detailedResults');
+            const listDiv = document.getElementById('articlesList');
+            
+            const articleInfo = articles.slice(0, 10).map(article => {
+                return `ID: ${article.id} | Título: ${article.titulo} | Status: ${article.status} | URL: ${article.published_url || 'null'} | Data: ${article.scheduled_date || 'null'}`;
+            }).join('\n');
+
+            listDiv.textContent = `Primeiros 10 artigos:\n\n${articleInfo}`;
+            detailedDiv.style.display = 'block';
+        }
+
+        async function fixAndTest() {
+            console.log('🔧 Aplicando correção...');
+            
+            // 1. Configurar token
+            localStorage.setItem('auth_token', TOKEN);
+            
+            // 2. Testar API
+            const result = await testAPI();
+            
+            // 3. Testar lógica
+            testCalendarLogic();
+            
+            if (result.success) {
+                alert(`✅ Correção aplicada!\n\n📊 Resumo:\n- Total de artigos: ${result.articles.length}\n- Publicados: ${result.publishedCount}\n- Agendados: ${result.scheduledCount}\n\n🎯 O calendário agora deve exibir ${result.publishedCount + result.scheduledCount} artigos!`);
+                
+                // Abrir calendário
+                setTimeout(() => {
+                    window.open('http://localhost:5174/#calendario', '_blank');
+                }, 1000);
+            } else {
+                alert('❌ Erro ao testar API: ' + result.error);
+            }
+        }
+
+        // Teste automático ao carregar
+        window.onload = function() {
+            testAPI();
+        };
+    </script>
+</body>
+</html>

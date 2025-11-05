@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste API URL</title>
+</head>
+<body>
+    <h1>Teste de URL da API</h1>
+    <div id="results"></div>
+    
+    <script type="module">
+        // Simular ambiente de produção
+        const getApiUrl = () => {
+            const isDevelopment = window.location.hostname === 'localhost' || 
+                               window.location.hostname === '127.0.0.1';
+            
+            if (isDevelopment) {
+                return 'http://localhost:8000/api';
+            }
+            
+            return 'https://api.bloginfinitoautomatico.com/api';
+        };
+        
+        const apiUrl = getApiUrl();
+        const financialUrl = `${apiUrl}/financial-dashboard`;
+        
+        document.getElementById('results').innerHTML = `
+            <p><strong>Hostname:</strong> ${window.location.hostname}</p>
+            <p><strong>API Base URL:</strong> ${apiUrl}</p>
+            <p><strong>Financial Dashboard URL:</strong> ${financialUrl}</p>
+            <p><strong>URL Duplicada (incorreta):</strong> ${apiUrl}/api/financial-dashboard</p>
+        `;
+        
+        console.log('🔧 URL da API:', apiUrl);
+        console.log('🔧 URL Financial Dashboard:', financialUrl);
+    </script>
+</body>
+</html>

@@ -1,0 +1,895 @@
+/* Explicit global CSS fallbacks to quickly restore layout when Tailwind
+   utilities are not present. This intentionally avoids @tailwind/@apply so
+   it works even if the tooling is in a broken state. Keep minimal and
+   focused on sidebar, cards grid, buttons and a few utilities. */
+
+:root {
+  /* Theme tokens used across components (map to Tailwind tokens when build runs) */
+  --bia-purple: #8c52ff;
+  --bia-purple-600: #7c3aed;
+  --bg: #0f172a;
+  --muted: #94a3b8;
+  --card-foreground: #0f172a;
+  --card-background: #ffffff;
+  --border: #e6e6e6;
+  --radius: 0.5rem;
+  /* Sidebar sizing used by components when Tailwind utilities are missing */
+  --sidebar-width: 18rem; /* 288px - Aumentado de 16rem para 18rem */
+  --sidebar-width-icon: 4.5rem; /* small collapsed width for icon-only mode */
+}
+
+/* Basic page defaults */
+*, *::before, *::after { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+  background: var(--bg);
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Sidebar */
+.sidebar {
+  background: var(--card-background);
+  color: var(--bia-purple);
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  border-right: 1px solid var(--border);
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  z-index: 40;
+}
+
+/* Make sure content sits to the right of the fixed sidebar */
+.app-root { min-height: 100vh; }
+.main-column { margin-left: var(--sidebar-width); flex: 1 1 auto; min-height: 100vh; display: flex; flex-direction: column; }
+
+/* Helper class used by Layout.tsx to ensure the desktop sidebar is visible
+   and matches the original layout. This mirrors the original lg:flex behavior */
+.desktop-sidebar {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .desktop-sidebar {
+    display: flex;
+    width: 18rem; /* matches new Sidebar SIDEBAR_WIDTH */
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    background: var(--card-background);
+  }
+}
+
+/* Emulate common Tailwind responsive utilities used on Layout.tsx when
+   Tailwind is not processed: '.hidden lg:flex lg:w-64 lg:flex-col lg:border-r lg:border-gray-200 lg:bg-white' */
+.hidden { display: none !important; }
+@media (min-width: 768px) {
+  /* emulate md:block/flex utilities */
+  .md\:block { display: block !important; }
+  .md\:flex { display: flex !important; }
+  .md\:hidden { display: none !important; }
+  .md\:w-64 { width: 18rem !important; } /* Atualizado para nova largura */
+  .md\:flex-col { flex-direction: column !important; }
+}
+
+@media (min-width: 1024px) {
+  .lg\:flex { display: flex !important; }
+  .lg\:w-64 { width: 18rem !important; } /* Atualizado para nova largura */
+  .lg\:flex-col { flex-direction: column !important; }
+  .lg\:border-r { border-right: 1px solid var(--border) !important; }
+  .lg\:border-gray-200 { border-right-color: #e5e7eb !important; }
+  .lg\:bg-white { background: #ffffff !important; }
+}
+
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem; /* Reduzido ainda mais para Safari */
+  padding: 0.15rem; /* Reduzido ainda mais para Safari */
+  border-radius: 0.375rem;
+  text-decoration: none;
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  width: 100%;
+  cursor: pointer;
+}
+
+.sidebar-item:hover {
+  background-color: rgba(140, 82, 255, 0.08); /* Roxo BIA translúcido */
+  color: var(--bia-purple);
+}
+
+/* Estado desabilitado para itens do sidebar */
+.sidebar-item:disabled,
+.sidebar-item.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.sidebar-item:disabled:hover,
+.sidebar-item.disabled:hover {
+  background-color: transparent;
+  color: #6b7280;
+}
+
+.sidebar-item .icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* Layout internals inside the fixed sidebar - Espaçamentos otimizados */
+.sidebar-top { 
+  padding: 0.400rem 0.5rem; 
+  display: flex; 
+  align-items: center; 
+  justify-content: flex-start; /* Mudou de center para flex-start */
+}
+.sidebar-top.justify-start { 
+  justify-content: flex-start; 
+}
+.sidebar-nav { padding: 0.0625rem 0.5rem; overflow-y: auto; flex: 1 1 auto; }
+.sidebar-nav ul { margin: 0; padding: 0; list-style: none; }
+.sidebar-nav li { margin-bottom: 0.00781rem; } /* Ultra reduzido para Safari */
+.sidebar-footer { 
+  padding: 0.25rem 0.5rem; /* Otimizado ainda mais para reduzir espaçamento */
+  border-top: 1px solid var(--border); 
+  background: transparent; 
+}
+/* Avatar removido - não deve aparecer no sidebar */
+.sidebar .avatar { 
+  display: none !important;
+}
+
+.sidebar .avatar-fallback { 
+  display: none !important;
+}
+.sidebar .icon-placeholder { 
+  color: var(--bia-purple); 
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: none !important;
+  background-color: transparent !important;
+}
+
+.sidebar .icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  background: none !important;
+  background-color: transparent !important;
+}
+
+/* REGRA GLOBAL EXTREMAMENTE ESPECÍFICA: NUNCA FUNDOS EM ÍCONES - APENAS MUDANÇA DE COR */
+/* Seletores ultra-específicos para garantir que NENHUM ícone tenha fundo */
+.sidebar svg *, 
+.sidebar .icon *, 
+.sidebar .icon-placeholder *,
+.sidebar svg,
+.sidebar .icon,
+.sidebar .icon-placeholder,
+.sidebar-item svg,
+.sidebar-item .icon,
+.sidebar-item .icon-placeholder,
+[data-slot="sidebar-menu-button"] svg,
+[data-slot="sidebar-menu-button"] .icon,
+[data-slot="sidebar-menu-button"] .icon-placeholder,
+.sidebar-actions svg,
+.sidebar-actions .icon,
+.btn svg,
+.btn .icon,
+.btn-ghost svg,
+.btn-ghost .icon,
+.btn-destructive svg,
+.btn-destructive .icon,
+/* Estados hover e active */
+.sidebar-item:hover svg,
+.sidebar-item:hover .icon,
+.sidebar-item:hover .icon-placeholder,
+.sidebar-item.active svg,
+.sidebar-item.active .icon,
+.sidebar-item.active .icon-placeholder,
+[data-slot="sidebar-menu-button"]:hover svg,
+[data-slot="sidebar-menu-button"]:hover .icon,
+[data-slot="sidebar-menu-button"]:hover .icon-placeholder,
+[data-slot="sidebar-menu-button"][data-active="true"] svg,
+[data-slot="sidebar-menu-button"][data-active="true"] .icon,
+[data-slot="sidebar-menu-button"][data-active="true"] .icon-placeholder,
+.btn-ghost:hover svg,
+.btn-ghost:hover .icon,
+.btn-destructive:hover svg,
+.btn-destructive:hover .icon,
+/* Elementos filhos de ícones */
+.sidebar svg path,
+.sidebar svg circle,
+.sidebar svg rect,
+.sidebar svg g,
+.sidebar .icon path,
+.sidebar .icon circle,
+.sidebar .icon rect,
+.sidebar .icon g,
+/* Garantir que elementos com classes de ícones populares também não tenham fundo */
+.sidebar .lucide,
+.sidebar .feather,
+.sidebar .heroicon,
+.sidebar .tabler,
+.sidebar .phosphor,
+/* Elementos React/JSX de ícones */
+.sidebar [data-lucide],
+.sidebar [data-icon],
+.sidebar-item [data-lucide],
+.sidebar-item [data-icon],
+/* Qualquer SVG dentro do sidebar */
+.sidebar svg *,
+.sidebar-item svg *,
+[data-slot="sidebar-menu-button"] svg *,
+.sidebar-actions svg * {
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  outline: none !important;
+}
+
+/* FORÇA BRUTA: Remover QUALQUER fundo de ícones com especificidade máxima */
+body .sidebar svg,
+body .sidebar .icon,
+body .sidebar .icon-placeholder,
+body .sidebar-item svg,
+body .sidebar-item .icon,
+body .sidebar-item .icon-placeholder,
+body [data-slot="sidebar-menu-button"] svg,
+body [data-slot="sidebar-menu-button"] .icon,
+body [data-slot="sidebar-menu-button"] .icon-placeholder,
+body .sidebar-actions svg,
+body .sidebar-actions .icon,
+body .btn svg,
+body .btn .icon,
+body .btn-ghost svg,
+body .btn-ghost .icon,
+body .btn-destructive svg,
+body .btn-destructive .icon,
+/* Estados hover e active com força bruta */
+body .sidebar-item:hover svg,
+body .sidebar-item:hover .icon,
+body .sidebar-item:hover .icon-placeholder,
+body .sidebar-item.active svg,
+body .sidebar-item.active .icon,
+body .sidebar-item.active .icon-placeholder,
+body [data-slot="sidebar-menu-button"]:hover svg,
+body [data-slot="sidebar-menu-button"]:hover .icon,
+body [data-slot="sidebar-menu-button"]:hover .icon-placeholder,
+body [data-slot="sidebar-menu-button"][data-active="true"] svg,
+body [data-slot="sidebar-menu-button"][data-active="true"] .icon,
+body [data-slot="sidebar-menu-button"][data-active="true"] .icon-placeholder,
+body .btn-ghost:hover svg,
+body .btn-ghost:hover .icon,
+body .btn-destructive:hover svg,
+body .btn-destructive:hover .icon {
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  background-attachment: initial !important;
+  background-blend-mode: initial !important;
+  background-clip: initial !important;
+  background-origin: initial !important;
+  background-position: initial !important;
+  background-repeat: initial !important;
+  background-size: initial !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  outline: none !important;
+}
+
+/* Regra adicional para sobrescrever qualquer classe do Tailwind */
+.sidebar [class*="bg-"],
+.sidebar-item [class*="bg-"],
+[data-slot="sidebar-menu-button"] [class*="bg-"] {
+  background: none !important;
+  background-color: transparent !important;
+}
+
+.sidebar .label { 
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+
+/* Footer inside fixed sidebar should not push content */
+.sidebar-footer { box-shadow: inset 0 1px 0 rgba(0,0,0,0.02); }
+
+/* Viewport height helpers used by the sidebar */
+.h-svh { height: 100svh; }
+.min-h-svh { min-height: 100svh; }
+
+/* Fallback for Tailwind arbitrary width classes like w-(--sidebar-width) */
+[class*="w-(--sidebar-width)"] { width: var(--sidebar-width) !important; }
+[class*="w-(--sidebar-width-icon)"] { width: var(--sidebar-width-icon) !important; }
+
+/* Force display of the sidebar container and inner area on desktop (emulate md:flex) */
+@media (min-width: 768px) {
+  [data-slot="sidebar-container"] { display: flex !important; position: fixed; inset: 0 auto 0 0; z-index: 40; height: 100svh; }
+  [data-slot="sidebar-gap"] { display: block !important; width: var(--sidebar-width); }
+  [data-slot="sidebar-inner"] { display: flex !important; flex-direction: column; height: 100%; }
+}
+
+/* Strong fallback: ensure sidebar DOM is visible and content is offset */
+[data-slot="sidebar"] { display: block !important; }
+[data-slot="sidebar-gap"] { display: block !important; }
+[data-slot="sidebar-container"] { display: flex !important; }
+[data-slot="sidebar-inner"] { display: flex !important; }
+
+/* Push main content to the right when sidebar is present */
+[data-slot="sidebar-inset"] { margin-left: var(--sidebar-width); }
+
+/* As a safety, also push .container if present */
+.container { max-width: 100%; }
+
+/* DIAGNOSTIC HIGHLIGHTS - remove after debugging */
+/* Sidebar visual style aiming for Figma/BIA theme */
+[data-slot="sidebar"], .sidebar {
+  background: #ffffff; /* white background */
+  color: var(--bia-purple);
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Sidebar items: purple text and icons, hover/active purple bg with white text */
+.sidebar-item, [data-slot="sidebar-menu-button"] {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.375rem;
+  color: var(--bia-purple);
+  background: transparent;
+  text-decoration: none;
+  cursor: pointer;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.sidebar-item .icon-placeholder, [data-slot="sidebar-menu-button"] .icon {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bia-purple);
+  flex-shrink: 0;
+  background: none !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.sidebar-item:hover, [data-slot="sidebar-menu-button"]:hover,
+.sidebar-item.active, [data-slot="sidebar-menu-button"][data-active="true"] {
+  background: var(--bia-purple);
+  color: #ffffff;
+}
+
+.sidebar-item:hover .icon-placeholder, [data-slot="sidebar-menu-button"]:hover .icon,
+.sidebar-item.active .icon-placeholder, [data-slot="sidebar-menu-button"][data-active="true"] .icon {
+  color: #ffffff;
+  background: none !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Logout: white background, red text and border */
+.logout-btn {
+  background: #ffffff;
+  color: #dc2626; /* red-600 */
+  border: 1px solid #dc2626;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.5rem;
+}
+
+/* ConnectivityStatus no sidebar */
+.sidebar .connectivity-status {
+  font-size: 0.6rem;
+  color: var(--bia-purple);
+  opacity: 0.8;
+}
+
+/* Garantir que todos os badges no plano tenham o estilo correto */
+.sidebar .user-plan,
+.sidebar [class*="badge"],
+.sidebar .badge {
+  background: var(--bia-purple) !important;
+  color: white !important;
+  border: none !important;
+}
+
+/* User info section - Sem avatar, com quebra de linha - Espaçamentos otimizados */
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem; /* Reduzido de 0.5rem para 0.375rem */
+  margin-bottom: 0.5rem; /* Reduzido de 0.75rem para 0.5rem */
+  padding: 0.375rem; /* Reduzido de 0.5rem para 0.375rem */
+  background: rgba(140, 82, 255, 0.05);
+  border-radius: 6px; /* Reduzido de 8px para 6px */
+  border: 1px solid rgba(140, 82, 255, 0.1);
+}
+
+.user-details {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+}
+
+.user-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--bia-purple);
+  word-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+  line-height: 1.3;
+  max-width: 100%;
+  overflow-wrap: break-word;
+}
+
+.user-plan {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 12px;
+  background: var(--bia-purple);
+  color: white;
+  font-weight: 600;
+  text-align: center;
+  white-space: nowrap;
+  display: inline-block;
+  margin-top: 0.25rem;
+}
+
+.user-plan.premium {
+  background: var(--bia-purple);
+  color: white;
+  font-weight: 700;
+}
+
+/* Tailwind-like utility mappings used by the sidebar components */
+.bg-sidebar { background: var(--sidebar); }
+.text-sidebar-foreground { color: var(--sidebar-foreground); }
+.bg-sidebar-accent { background: var(--sidebar-accent); }
+.text-sidebar-accent-foreground { color: var(--sidebar-accent-foreground); }
+.ring-sidebar-ring { box-shadow: 0 0 0 2px var(--sidebar-ring); }
+.border-sidebar-border { border-color: var(--sidebar-border); }
+.bg-background { background: var(--background); }
+.text-sidebar-primary { color: var(--sidebar-primary); }
+.text-sidebar-primary-foreground { color: var(--sidebar-primary-foreground); }
+
+/* Ensure the sidebar containers respect the inline --sidebar-width variable
+  used by the components (they often rely on Tailwind arbitrary width w-(--sidebar-width)) */
+[data-slot="sidebar-gap"] { width: var(--sidebar-width); min-width: var(--sidebar-width); }
+[data-slot="sidebar-container"] { width: var(--sidebar-width); }
+[data-slot="sidebar-wrapper"] { min-width: var(--sidebar-width); }
+
+/* Primary button (BIA) */
+.btn-bia {
+  background: var(--bia-purple);
+  color: #fff;
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.375rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 0.875rem;
+  width: auto; /* Mudança para auto para não ocupar toda largura */
+  text-align: left;
+  justify-content: flex-start;
+}
+
+.btn-bia:hover { 
+  background: var(--bia-purple-600);
+  opacity: 0.95; 
+}
+
+/* Logout button style */
+.logout-btn {
+  background: #fff;
+  color: #dc2626; /* red-600 */
+  border: 1px solid #dc2626;
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.375rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  width: 100%;
+  text-align: left;
+  justify-content: flex-start;
+}
+
+.logout-btn:hover {
+  background: #dc2626;
+  color: #fff;
+}
+
+/* Botões de ação no footer do sidebar - seguindo padrão do sistema */
+.sidebar-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem; /* Alinhado com sidebar-item */
+  padding: 0.15rem; /* Alinhado com sidebar-item */
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  width: 100%;
+  text-align: left;
+  justify-content: flex-start;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  transition: all 0.2s ease;
+  color: #6b7280; /* Cor padrão igual aos itens do menu */
+}
+
+.sidebar-action-btn:hover {
+  background-color: rgba(140, 82, 255, 0.08); /* Roxo BIA translúcido */
+}
+
+.sidebar-action-btn:hover span {
+  color: var(--bia-purple) !important; /* Força cor roxa no hover */
+}
+
+.sidebar-action-btn:hover .w-6 {
+  background-color: rgba(140, 82, 255, 0.1) !important; /* Fundo do ícone roxo translúcido */
+}
+
+.sidebar-action-btn:hover svg {
+  color: var(--bia-purple) !important; /* Ícone roxo no hover */
+}
+
+/* Sobrescrever classes Tailwind específicas dos botões de ação */
+.sidebar-action-btn:hover .group-hover\:bg-blue-50,
+.sidebar-action-btn:hover .group-hover\:bg-green-50,
+.sidebar-action-btn:hover .group-hover\:bg-red-50 {
+  background-color: rgba(140, 82, 255, 0.1) !important;
+}
+
+.sidebar-action-btn:hover .group-hover\:text-blue-600,
+.sidebar-action-btn:hover .group-hover\:text-green-600,
+.sidebar-action-btn:hover .group-hover\:text-red-600 {
+  color: var(--bia-purple) !important;
+}
+
+/* CSS mais específico para sobrescrever completamente os hovers do Tailwind */
+.sidebar-actions .group:hover .bg-gray-50 {
+  background-color: rgba(140, 82, 255, 0.1) !important;
+}
+
+.sidebar-actions .group:hover .text-gray-600 {
+  color: var(--bia-purple) !important;
+}
+
+.sidebar-actions .group:hover .text-gray-700 {
+  color: var(--bia-purple) !important;
+}
+
+/* Botões no footer do sidebar */
+.sidebar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.00781rem; /* Alinhado com o espaçamento ultra reduzido */
+}
+
+.btn, .btn-ghost, .btn-destructive {
+  display: flex;
+  align-items: center;
+  gap: 0.2rem; /* Alinhado com sidebar-item */
+  padding: 0.15rem; /* Alinhado com sidebar-item */
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500; /* Adicionado peso da fonte */
+  width: 100%;
+  text-align: left;
+  justify-content: flex-start;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  transition: all 0.2s ease;
+  color: #6b7280; /* Cor padrão igual aos itens do menu */
+}
+
+.btn .icon, .btn-ghost .icon, .btn-destructive .icon {
+  background: none !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* Botão Admin - seguindo padrão do sidebar */
+.btn-ghost {
+  color: #6b7280;
+  background: transparent;
+}
+
+.btn-ghost:hover {
+  background: rgba(140, 82, 255, 0.08); /* Roxo BIA translúcido */
+  color: var(--bia-purple);
+}
+
+.btn-ghost:hover .icon {
+  color: var(--bia-purple);
+}
+
+.btn-destructive {
+  color: #6b7280; /* Cor padrão igual aos outros */
+  background: transparent;
+}
+
+.btn-destructive:hover {
+  background: #fef2f2; /* Background suave vermelho */
+  color: #dc2626; /* Texto vermelho no hover */
+}
+
+.btn-destructive:hover .icon {
+  color: #dc2626; /* Ícone vermelho no hover */
+}
+
+/* Cards grid helpers (fallback) */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .cards-grid { gap: 1rem; }
+}
+
+@media (min-width: 768px) {
+  .cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1024px) {
+  .cards-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+.card {
+  background: var(--card-background);
+  color: var(--card-foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  box-shadow: 0 1px 2px rgba(16,24,40,0.03);
+}
+
+/* Small set of utility classes used commonly by components */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.flex-row { flex-direction: row; }
+.hidden { display: none !important; }
+.block { display: block !important; }
+.inline-block { display: inline-block !important; }
+.text-center { text-align: center; }
+.w-full { width: 100%; }
+.max-w-full { max-width: 100%; }
+.overflow-hidden { overflow: hidden; }
+.rounded-md { border-radius: 0.5rem; }
+.p-4 { padding: 1rem; }
+.p-2 { padding: 0.5rem; }
+.m-0 { margin: 0; }
+.gap-4 { gap: 1rem; }
+.gap-2 { gap: 0.5rem; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.text-muted { color: var(--muted); }
+
+/* End of explicit fallback CSS */
+
+
+
+/* ===== STRONG OVERRIDES - Fix visibility, layout offsets and header/logo alignment ===== */
+/* Ensure the sidebar is always visible on desktop and properly positioned */
+@media (min-width: 768px) {
+  [data-slot="sidebar"] {
+    display: flex !important;
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: var(--sidebar-width) !important;
+    min-width: var(--sidebar-width) !important;
+    z-index: 40 !important;
+    background: #fff !important;
+    border-right: 1px solid var(--border) !important;
+    flex-direction: column !important;
+  }
+
+  [data-slot="sidebar-container"] {
+    display: flex !important;
+    position: fixed !important;
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    width: var(--sidebar-width) !important;
+    z-index: 40 !important;
+  }
+
+  /* The gap element can remain, but ensure it's not collapsing the layout */
+  [data-slot="sidebar-gap"] {
+    display: block !important;
+    width: var(--sidebar-width) !important;
+    min-width: var(--sidebar-width) !important;
+  }
+
+  /* Push the main content to the right equal to the sidebar width */
+  [data-slot="sidebar-inset"] {
+    margin-left: var(--sidebar-width) !important;
+  }
+}
+
+/* Responsividade aprimorada do sidebar */
+/* Mobile First - Esconder sidebar em telas pequenas */
+@media (max-width: 767px) {
+  :root {
+    --sidebar-width: 0rem; /* Sidebar colapsado no mobile */
+  }
+  
+  .sidebar {
+    width: 0;
+    min-width: 0;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+  }
+  
+  .main-column {
+    margin-left: 0;
+  }
+  
+  [data-slot="sidebar"] { 
+    display: none !important; 
+  }
+  
+  [data-slot="sidebar-container"] { 
+    display: none !important; 
+  }
+  
+  [data-slot="sidebar-gap"] { 
+    display: none !important; 
+    width: 0 !important;
+  }
+  
+  [data-slot="sidebar-inset"] { 
+    margin-left: 0 !important; 
+  }
+}
+
+/* Tablet - Sidebar menor */
+@media (min-width: 768px) and (max-width: 1023px) {
+  :root {
+    --sidebar-width: 16rem; /* Sidebar um pouco menor em tablets */
+  }
+}
+
+/* Desktop - Sidebar completo */
+@media (min-width: 1024px) {
+  :root {
+    --sidebar-width: 18rem; /* Sidebar completo em desktop */
+  }
+}
+
+/* Sidebar menu button / item visual polish */
+[data-slot="sidebar-menu-button"], [data-slot="sidebar-menu-item"] > * {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
+  padding: 0.4rem 0.75rem !important;
+  border-radius: 0.375rem !important;
+  color: var(--bia-purple) !important;
+  background: transparent !important;
+  text-decoration: none !important;
+  border: none !important;
+  width: 100% !important;
+  text-align: left !important;
+  font-size: 0.875rem !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+[data-slot="sidebar-menu-button"][data-active="true"] {
+  background: var(--bia-purple) !important;
+  color: #ffffff !important;
+}
+
+[data-slot="sidebar-menu-button"]:hover {
+  background: var(--bia-purple) !important;
+  color: #fff !important;
+}
+
+[data-slot="sidebar-menu-button"][data-active="true"] .icon,
+[data-slot="sidebar-menu-button"]:hover .icon {
+  color: #ffffff !important;
+  background: none !important;
+}
+
+/* Header and logo alignment */
+.header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 0.5rem 1rem !important;
+  background: transparent !important;
+}
+
+.header-logo { display: inline-flex; align-items: center; gap: 0.5rem; }
+.header-logo img, .header-logo > img { height: 28px; width: auto; display: block; }
+
+/* Main content container sizing to avoid undesired centering */
+.content-area { padding: 1rem !important; flex: 1 1 auto !important; }
+.container { max-width: 1200px !important; margin: 1rem auto !important; padding: 1rem !important; box-sizing: border-box !important; }
+
+.content-area .text-center { text-align: left !important; }
+
+/* Ensure header text is left-aligned but keep content centered */
+.dashboard-header { 
+  text-align: left !important; 
+  align-items: flex-start !important;
+}
+
+.dashboard-header .flex-1 {
+  text-align: left !important;
+}
+
+.dashboard-header h1,
+.dashboard-header p {
+  text-align: left !important;
+  margin-left: 0 !important;
+}
+
+/* Ensure cards grid and main headings look proportionate */
+.cards-grid { gap: 1rem !important; }
+.card { padding: 1rem !important; }
+
+/* Avatar removido do sidebar */
+[data-slot="sidebar-footer"] .avatar, .sidebar .avatar { 
+  display: none !important;
+}
+
+[data-slot="sidebar-footer"] { 
+  display: flex !important; 
+  flex-direction: column !important; 
+  gap: 0.5rem !important;
+}
+
+/* Small utility: prevent accidental global text centering */
+body, .app-root, .main-column, [data-slot="sidebar-inset"] { text-align: left !important; }
+
+/* End overrides */
+

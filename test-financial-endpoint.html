@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste Financial Dashboard</title>
+</head>
+<body>
+    <h1>Teste Financial Dashboard</h1>
+    <button onclick="testFinancialDashboard()">Testar Endpoint</button>
+    <div id="results"></div>
+    
+    <script>
+        async function testFinancialDashboard() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<p>Testando...</p>';
+            
+            try {
+                // Simular URL da produção
+                const apiUrl = 'https://api.bloginfinitoautomatico.com/api';
+                const financialUrl = `${apiUrl}/financial-dashboard`;
+                
+                console.log('🔧 Testando URL:', financialUrl);
+                
+                const response = await fetch(financialUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer fake-token' // Para testar sem auth
+                    }
+                });
+                
+                results.innerHTML = `
+                    <h3>Resultado do Teste:</h3>
+                    <p><strong>URL Testada:</strong> ${financialUrl}</p>
+                    <p><strong>Status:</strong> ${response.status}</p>
+                    <p><strong>Status Text:</strong> ${response.statusText}</p>
+                    <p><strong>Headers:</strong> ${JSON.stringify(Object.fromEntries(response.headers.entries()))}</p>
+                `;
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    results.innerHTML += `<p><strong>Response:</strong> ${JSON.stringify(data, null, 2)}</p>`;
+                } else {
+                    const errorText = await response.text();
+                    results.innerHTML += `<p><strong>Error:</strong> ${errorText}</p>`;
+                }
+                
+            } catch (error) {
+                results.innerHTML = `
+                    <h3>Erro:</h3>
+                    <p>${error.message}</p>
+                `;
+                console.error('Erro:', error);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Teste: Cores Corretas do Calendário</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .button {
+            background: #8c52ff;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px 5px;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.3s;
+        }
+        .button:hover {
+            background: #7a47e6;
+            transform: translateY(-2px);
+        }
+        .post-item {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border-left: 4px solid;
+        }
+        .post-published {
+            background: #d4edda;
+            border-left-color: #28a745;
+            color: #155724;
+        }
+        .post-scheduled {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+            color: #856404;
+        }
+        .post-pending {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+            color: #721c24;
+        }
+        .test-results {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #8c52ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 Teste: Lógica de Cores do Calendário</h1>
+            <p>Verificação se posts futuros aparecem como agendados (laranja) e passados como publicados (verde)</p>
+        </div>
+
+        <div class="test-results">
+            <h3>🧪 Teste da Lógica</h3>
+            <button onclick="testarLogica()" class="button">🔄 Testar Lógica de Datas</button>
+            <button onclick="testarAPI()" class="button">📡 Testar API Real</button>
+            <div id="resultados"></div>
+        </div>
+
+        <div id="postsVisu" style="display: none;">
+            <h3>📅 Visualização dos Posts</h3>
+            <div id="listaPostsVisu"></div>
+        </div>
+    </div>
+
+    <script>
+        const TOKEN = localStorage.getItem('auth_token') || '200|YSHrHcep1okOtfTwhLNoXtp7ShS8How1oU1pDm2K87cb22fb';
+        const API_BASE = 'http://localhost:8000/api';
+
+        function testarLogica() {
+            const resultsDiv = document.getElementById('resultados');
+            const agora = new Date();
+            
+            // Dados de teste simulando agendamentos
+            const agendamentosTest = [
+                {
+                    id: 1,
+                    data_agendamento: new Date(agora.getTime() - 24 * 60 * 60 * 1000).toISOString(), // Ontem
+                    status: 'publicado',
+                    artigo: { titulo: 'Post de Ontem (Publicado)' },
+                    site: { nome: 'Site Teste' }
+                },
+                {
+                    id: 2,
+                    data_agendamento: agora.toISOString(), // Hoje
+                    status: 'publicado',
+                    artigo: { titulo: 'Post de Hoje (Publicado)' },
+                    site: { nome: 'Site Teste' }
+                },
+                {
+                    id: 3,
+                    data_agendamento: new Date(agora.getTime() + 24 * 60 * 60 * 1000).toISOString(), // Amanhã
+                    status: 'pendente',
+                    artigo: { titulo: 'Post de Amanhã (Pendente)' },
+                    site: { nome: 'Site Teste' }
+                },
+                {
+                    id: 4,
+                    data_agendamento: new Date(agora.getTime() + 48 * 60 * 60 * 1000).toISOString(), // Depois de amanhã
+                    status: 'publicado',
+                    artigo: { titulo: 'Post Futuro (Status Publicado)' },
+                    site: { nome: 'Site Teste' }
+                },
+                {
+                    id: 5,
+                    data_agendamento: new Date(agora.getTime() - 48 * 60 * 60 * 1000).toISOString(), // Anteontem
+                    status: 'pendente',
+                    artigo: { titulo: 'Post Antigo (Ainda Pendente)' },
+                    site: { nome: 'Site Teste' }
+                }
+            ];
+
+            // Aplicar a mesma lógica do componente React
+            const posts = agendamentosTest.map(agendamento => {
+                const article = agendamento.artigo;
+                const dataAgendamento = new Date(agendamento.data_agendamento);
+                const isDataFutura = dataAgendamento > agora;
+
+                let type = 'published';
+                let status = '';
+                let cssClass = '';
+
+                if (isDataFutura) {
+                    // Se a data é futura, sempre tratar como agendado
+                    type = 'scheduled';
+                    status = `Agendado para ${agendamento.site?.nome || 'WordPress'}`;
+                    cssClass = 'post-scheduled';
+                } else {
+                    // Se a data já passou
+                    if (agendamento.status === 'publicado') {
+                        type = 'published';
+                        status = `Publicado via ${agendamento.site?.nome || 'WordPress'}`;
+                        cssClass = 'post-published';
+                    } else {
+                        // Data passou mas ainda não foi publicado
+                        type = 'scheduled';
+                        status = `Pendente (${agendamento.site?.nome || 'WordPress'})`;
+                        cssClass = 'post-pending';
+                    }
+                }
+
+                return {
+                    ...agendamento,
+                    article,
+                    type,
+                    status,
+                    cssClass,
+                    isDataFutura,
+                    dataFormatada: dataAgendamento.toLocaleString('pt-BR')
+                };
+            });
+
+            // Mostrar resultados
+            const futuros = posts.filter(p => p.isDataFutura);
+            const passados = posts.filter(p => !p.isDataFutura);
+            const agendados = posts.filter(p => p.type === 'scheduled');
+            const publicados = posts.filter(p => p.type === 'published');
+
+            resultsDiv.innerHTML = `
+                <div style="background: #e8f5e8; padding: 15px; border-radius: 5px; margin: 10px 0;">
+                    <h4>✅ Teste da Lógica Concluído</h4>
+                    <p><strong>Total de posts:</strong> ${posts.length}</p>
+                    <p><strong>Posts futuros:</strong> ${futuros.length} (devem ser laranja)</p>
+                    <p><strong>Posts passados:</strong> ${passados.length}</p>
+                    <p><strong>Aparecerão como agendados (laranja):</strong> ${agendados.length}</p>
+                    <p><strong>Aparecerão como publicados (verde):</strong> ${publicados.length}</p>
+                </div>
+            `;
+
+            // Mostrar visualização dos posts
+            const visuDiv = document.getElementById('postsVisu');
+            const listaDiv = document.getElementById('listaPostsVisu');
+            
+            listaDiv.innerHTML = posts.map(post => `
+                <div class="post-item ${post.cssClass}">
+                    <h5>${post.article.titulo}</h5>
+                    <p><strong>Data:</strong> ${post.dataFormatada}</p>
+                    <p><strong>Status no DB:</strong> ${post.status}</p>
+                    <p><strong>Tipo no calendário:</strong> ${post.type}</p>
+                    <p><strong>É futuro?</strong> ${post.isDataFutura ? 'Sim' : 'Não'}</p>
+                    <p><strong>Cor esperada:</strong> ${post.cssClass.includes('scheduled') ? 'Laranja/Amarelo' : post.cssClass.includes('published') ? 'Verde' : 'Vermelho'}</p>
+                </div>
+            `).join('');
+
+            visuDiv.style.display = 'block';
+        }
+
+        async function testarAPI() {
+            const resultsDiv = document.getElementById('resultados');
+            resultsDiv.innerHTML = '<p>🔄 Testando API real...</p>';
+
+            try {
+                const response = await fetch(`${API_BASE}/agendamentos`, {
+                    headers: {
+                        'Authorization': `Bearer ${TOKEN}`,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (!response.ok) throw new Error(`API: ${response.status}`);
+                const data = await response.json();
+                const agendamentos = data.data?.data || data.data || [];
+
+                const agora = new Date();
+                const agendamentosFuturos = agendamentos.filter(a => new Date(a.data_agendamento) > agora);
+                const agendamentosPassados = agendamentos.filter(a => new Date(a.data_agendamento) <= agora);
+
+                resultsDiv.innerHTML = `
+                    <div style="background: #e8f5e8; padding: 15px; border-radius: 5px; margin: 10px 0;">
+                        <h4>✅ API Real Testada</h4>
+                        <p><strong>Total de agendamentos:</strong> ${agendamentos.length}</p>
+                        <p><strong>Agendamentos futuros:</strong> ${agendamentosFuturos.length} (devem aparecer como laranja)</p>
+                        <p><strong>Agendamentos passados:</strong> ${agendamentosPassados.length}</p>
+                        <p><strong>Próximo agendamento:</strong> ${agendamentosFuturos.length > 0 ? 
+                            new Date(agendamentosFuturos.sort((a, b) => new Date(a.data_agendamento) - new Date(b.data_agendamento))[0].data_agendamento).toLocaleString('pt-BR') :
+                            'Nenhum'
+                        }</p>
+                    </div>
+                `;
+
+                // Mostrar os próximos 5 agendamentos futuros
+                if (agendamentosFuturos.length > 0) {
+                    const proximosAgendamentos = agendamentosFuturos
+                        .sort((a, b) => new Date(a.data_agendamento) - new Date(b.data_agendamento))
+                        .slice(0, 5);
+
+                    const listaDiv = document.getElementById('listaPostsVisu');
+                    listaDiv.innerHTML = proximosAgendamentos.map(a => `
+                        <div class="post-item post-scheduled">
+                            <h5>${a.artigo?.titulo || 'Sem título'}</h5>
+                            <p><strong>Data de publicação:</strong> ${new Date(a.data_agendamento).toLocaleString('pt-BR')}</p>
+                            <p><strong>Status:</strong> ${a.status}</p>
+                            <p><strong>Site:</strong> ${a.site?.nome || 'N/A'}</p>
+                            <p style="color: #856404;"><strong>⏰ Este deve aparecer como LARANJA no calendário</strong></p>
+                        </div>
+                    `).join('');
+
+                    document.getElementById('postsVisu').style.display = 'block';
+                }
+
+            } catch (error) {
+                resultsDiv.innerHTML = `
+                    <div style="background: #f8d7da; padding: 15px; border-radius: 5px; margin: 10px 0;">
+                        <h4>❌ Erro ao testar API</h4>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Auto-executar teste ao carregar
+        window.onload = function() {
+            testarLogica();
+        };
+    </script>
+</body>
+</html>

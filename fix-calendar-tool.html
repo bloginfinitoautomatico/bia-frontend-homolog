@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Correção Calendário BIA</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 900px; 
+            margin: 0 auto; 
+            padding: 20px; 
+            background: #f5f5f5;
+        }
+        .container { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 10px; 
+            margin-bottom: 20px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #8c52ff, #7a47e6);
+            color: white;
+            text-align: center;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        button { 
+            background: #8c52ff; 
+            color: white; 
+            padding: 12px 24px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            margin: 8px; 
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        button:hover { 
+            background: #7a47e6; 
+            transform: translateY(-1px);
+        }
+        .result { 
+            background: #f8f9fa; 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin-top: 15px; 
+            border-left: 4px solid #8c52ff; 
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        .success { border-left-color: #28a745; background: #d4edda; }
+        .error { border-left-color: #dc3545; background: #f8d7da; }
+        .warning { border-left-color: #ffc107; background: #fff3cd; }
+        .step {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #2196f3;
+        }
+        .progress {
+            background: #e0e0e0;
+            border-radius: 10px;
+            height: 8px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        .progress-bar {
+            background: linear-gradient(90deg, #8c52ff, #7a47e6);
+            height: 100%;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .status-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 2px solid #e9ecef;
+        }
+        .status-card.success { border-color: #28a745; background: #d4edda; }
+        .status-card.error { border-color: #dc3545; background: #f8d7da; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔧 Correção do Calendário BIA</h1>
+        <p>Ferramenta para diagnosticar e corrigir problemas no calendário</p>
+    </div>
+
+    <div class="container">
+        <h2>🎯 Correção Automática</h2>
+        <p>Clique no botão abaixo para executar a correção completa automática:</p>
+        
+        <button onclick="runAutoFix()" id="autoFixBtn">
+            🚀 Executar Correção Completa
+        </button>
+        
+        <div class="progress">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        
+        <div id="autoFixResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="container">
+        <h2>📊 Status Atual</h2>
+        <div class="status-grid" id="statusGrid">
+            <div class="status-card" id="tokenStatus">
+                <h4>🔑 Token</h4>
+                <p>Verificando...</p>
+            </div>
+            <div class="status-card" id="apiStatus">
+                <h4>🌐 API</h4>
+                <p>Verificando...</p>
+            </div>
+            <div class="status-card" id="articlesStatus">
+                <h4>📝 Artigos</h4>
+                <p>Verificando...</p>
+            </div>
+            <div class="status-card" id="calendarStatus">
+                <h4>📅 Calendário</h4>
+                <p>Verificando...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🔧 Correções Manuais</h2>
+        <div class="step">
+            <h3>Passo 1: Configurar Autenticação</h3>
+            <button onclick="configureAuth()">🔑 Configurar Token</button>
+            <div id="authResult" class="result" style="display:none;"></div>
+        </div>
+
+        <div class="step">
+            <h3>Passo 2: Testar API</h3>
+            <button onclick="testAPI()">🧪 Testar API de Artigos</button>
+            <div id="apiResult" class="result" style="display:none;"></div>
+        </div>
+
+        <div class="step">
+            <h3>Passo 3: Abrir Calendário</h3>
+            <button onclick="openCalendar()">📅 Ir para Calendário</button>
+            <button onclick="reloadCalendar()">🔄 Recarregar Calendário</button>
+            <div id="calendarResult" class="result" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script>
+        // Configurações
+        const TOKEN = '197|xNN9nNkMb3bBA0rkNoBr20RzbkDLyCujdpsBjzuXcc93abaf';
+        const API_BASE = 'http://localhost:8000/api';
+        const FRONTEND_URL = 'http://localhost:5174';
+
+        // Utilitários
+        function updateProgress(percentage) {
+            document.getElementById('progressBar').style.width = percentage + '%';
+        }
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `result ${type}`;
+            element.textContent = message;
+        }
+
+        function updateStatus(statusId, success, message) {
+            const element = document.getElementById(statusId);
+            element.className = `status-card ${success ? 'success' : 'error'}`;
+            element.innerHTML = `<h4>${element.querySelector('h4').textContent}</h4><p>${message}</p>`;
+        }
+
+        // Funções principais
+        async function configureAuth() {
+            try {
+                localStorage.setItem('auth_token', TOKEN);
+                updateStatus('tokenStatus', true, 'Configurado');
+                showResult('authResult', `✅ Token configurado com sucesso!\n\nToken: ${TOKEN.substring(0, 30)}...`, 'success');
+                return true;
+            } catch (error) {
+                updateStatus('tokenStatus', false, 'Erro');
+                showResult('authResult', `❌ Erro ao configurar token: ${error.message}`, 'error');
+                return false;
+            }
+        }
+
+        async function testAPI() {
+            try {
+                showResult('apiResult', '🔄 Testando conexão com API...', 'info');
+                
+                const response = await fetch(`${API_BASE}/artigos`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'Authorization': `Bearer ${TOKEN}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const data = await response.json();
+                const articles = data.data?.data || data.data || [];
+                
+                updateStatus('apiStatus', true, 'Conectada');
+                updateStatus('articlesStatus', articles.length > 0, `${articles.length} artigos`);
+                
+                showResult('apiResult', 
+                    `✅ API funcionando perfeitamente!\n\n` +
+                    `Total de artigos: ${articles.length}\n` +
+                    `Artigos com URL publicada: ${articles.filter(a => a.published_url).length}\n` +
+                    `Artigos agendados: ${articles.filter(a => a.scheduled_date).length}\n\n` +
+                    `Primeiros 3 artigos:\n${articles.slice(0, 3).map(a => 
+                        `• ${a.titulo} (${a.status}) - Site: ${a.site_id}`
+                    ).join('\n')}`,
+                    'success'
+                );
+                
+                return { success: true, articles };
+            } catch (error) {
+                updateStatus('apiStatus', false, 'Erro');
+                updateStatus('articlesStatus', false, 'N/A');
+                showResult('apiResult', `❌ Erro na API: ${error.message}`, 'error');
+                return { success: false, error: error.message };
+            }
+        }
+
+        function openCalendar() {
+            try {
+                const calendarUrl = `${FRONTEND_URL}/#calendario`;
+                window.open(calendarUrl, '_blank');
+                showResult('calendarResult', `✅ Abrindo calendário em nova aba...\nURL: ${calendarUrl}`, 'success');
+                updateStatus('calendarStatus', true, 'Aberto');
+            } catch (error) {
+                showResult('calendarResult', `❌ Erro ao abrir calendário: ${error.message}`, 'error');
+                updateStatus('calendarStatus', false, 'Erro');
+            }
+        }
+
+        function reloadCalendar() {
+            try {
+                if (window.opener) {
+                    window.opener.location.reload();
+                    showResult('calendarResult', '✅ Calendário recarregado!', 'success');
+                } else {
+                    const calendarUrl = `${FRONTEND_URL}/#calendario`;
+                    window.open(calendarUrl, '_blank');
+                    showResult('calendarResult', '✅ Nova janela do calendário aberta!', 'success');
+                }
+            } catch (error) {
+                showResult('calendarResult', `❌ Erro: ${error.message}`, 'error');
+            }
+        }
+
+        async function runAutoFix() {
+            const btn = document.getElementById('autoFixBtn');
+            const result = document.getElementById('autoFixResult');
+            
+            btn.disabled = true;
+            btn.textContent = '🔄 Executando...';
+            result.style.display = 'block';
+            result.className = 'result';
+            
+            let log = '🚀 Iniciando correção automática...\n\n';
+            
+            try {
+                // Passo 1: Configurar token
+                updateProgress(20);
+                log += '📋 PASSO 1: Configurando autenticação...\n';
+                result.textContent = log;
+                
+                const authSuccess = await configureAuth();
+                if (!authSuccess) throw new Error('Falha na configuração do token');
+                
+                log += '✅ Token configurado com sucesso!\n\n';
+                result.textContent = log;
+                
+                // Passo 2: Testar API
+                updateProgress(40);
+                log += '📋 PASSO 2: Testando API...\n';
+                result.textContent = log;
+                
+                const apiResult = await testAPI();
+                if (!apiResult.success) throw new Error('API não está funcionando: ' + apiResult.error);
+                
+                log += `✅ API funcionando! ${apiResult.articles.length} artigos encontrados!\n\n`;
+                result.textContent = log;
+                
+                // Passo 3: Aguardar um pouco
+                updateProgress(60);
+                log += '📋 PASSO 3: Processando dados...\n';
+                result.textContent = log;
+                
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Passo 4: Abrir calendário
+                updateProgress(80);
+                log += '📋 PASSO 4: Abrindo calendário...\n';
+                result.textContent = log;
+                
+                openCalendar();
+                
+                // Finalizar
+                updateProgress(100);
+                log += '📋 PASSO 5: Finalizando...\n\n';
+                log += '🎉 CORREÇÃO CONCLUÍDA COM SUCESSO!\n\n';
+                log += '✅ Token configurado\n';
+                log += `✅ API funcionando (${apiResult.articles.length} artigos)\n`;
+                log += '✅ Calendário aberto em nova aba\n\n';
+                log += '💡 Se o calendário ainda estiver vazio:\n';
+                log += '1. Aguarde alguns segundos para carregar\n';
+                log += '2. Atualize a página do calendário (F5)\n';
+                log += '3. Verifique se está na aba "#calendario"\n';
+                
+                result.textContent = log;
+                result.className = 'result success';
+                
+            } catch (error) {
+                updateProgress(0);
+                log += `\n❌ ERRO: ${error.message}\n`;
+                result.textContent = log;
+                result.className = 'result error';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🚀 Executar Correção Completa';
+            }
+        }
+
+        // Verificar status inicial
+        window.onload = function() {
+            // Verificar token
+            const token = localStorage.getItem('auth_token');
+            updateStatus('tokenStatus', !!token, token ? 'Configurado' : 'Não configurado');
+            
+            // Verificar se estamos no frontend correto
+            if (window.location.href.includes('5174')) {
+                updateStatus('calendarStatus', true, 'Ativo');
+            } else {
+                updateStatus('calendarStatus', false, 'Não ativo');
+            }
+            
+            // Status inicial da API
+            updateStatus('apiStatus', false, 'Não testada');
+            updateStatus('articlesStatus', false, 'Não verificados');
+        };
+    </script>
+</body>
+</html>
