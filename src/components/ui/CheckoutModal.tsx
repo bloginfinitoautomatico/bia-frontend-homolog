@@ -18,7 +18,7 @@ import { PixPaymentModal } from './PixPaymentModal';
 import { CreditCardProcessingModal } from './CreditCardProcessingModal';
 
 interface Plan {
-  id: string | number;
+  id: string;
   name: string;
   price: number;
   description?: string;
@@ -124,7 +124,7 @@ export function CheckoutModal({ isOpen, onClose, plan, userData, onSuccess }: Ch
 
     try {
       const requestData = retryData || {
-        plan_id: Number(plan.id),
+        plan_id: plan.id,
         billing_type: billingType,
         customer_data: {
           ...customerData,
@@ -143,7 +143,7 @@ export function CheckoutModal({ isOpen, onClose, plan, userData, onSuccess }: Ch
       if (billingType === 'CREDIT_CARD') {
         // Usar endpoint específico para cartão de crédito
         result = await subscriptionService.createCreditCardPayment({
-          plan_id: Number(plan.id),
+          plan_id: plan.id,
           customer_data: {
             ...customerData,
             cpf_cnpj: customerData.cpf_cnpj.replace(/\D/g, '') // Remove formatação do CPF

@@ -39,7 +39,10 @@ export function Excluidos({ userData }: ExcluidosProps) {
     // Filtro por site
     if (filterSite !== 'all') {
       const siteId = parseInt(filterSite);
-      filtered = filtered.filter(idea => idea.siteId === siteId);
+        filtered = filtered.filter(idea => 
+          idea.siteId === siteId || 
+          idea.siteId.toString() === siteId.toString()
+        );
     }
     
     // Ordenação sempre por data (mais recente primeiro)
@@ -105,10 +108,12 @@ export function Excluidos({ userData }: ExcluidosProps) {
   const getFilteredIdeias = () => {
     let filtered = getAllIdeasByStatus();
     
-    // Filtro por site
+    // Filtro por site - compatível com UUIDs
     if (filterSite !== 'all') {
-      const siteId = parseInt(filterSite);
-      filtered = filtered.filter(idea => idea.siteId === siteId);
+      filtered = filtered.filter(idea => 
+        idea.siteId === filterSite || 
+        idea.siteId.toString() === filterSite.toString()
+      );
     }
     
     // Ordenação sempre por data (mais recente primeiro)

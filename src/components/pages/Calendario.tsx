@@ -21,6 +21,7 @@ import {
 } from '../icons';
 import { useBia } from '../BiaContext';
 import { useDashboard } from '../../hooks/useDashboard';
+import { getSiteName as getSiteNameUtil } from '../../utils/siteUtils';
 
 interface CalendarioProps {
   userData: any;
@@ -70,7 +71,7 @@ export function Calendario({ userData, onUpdateUser }: CalendarioProps) {
 
   // Estados principais
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedSiteId, setSelectedSiteId] = useState<'all' | number>('all');
+  const [selectedSiteId, setSelectedSiteId] = useState<'all' | string | number>('all');
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [agendamentos, setAgendamentos] = useState<any[]>([]);
   const [loadingAgendamentos, setLoadingAgendamentos] = useState(false);
@@ -140,7 +141,7 @@ export function Calendario({ userData, onUpdateUser }: CalendarioProps) {
       }
 
       const mapped = (found || []).map((article: any) => {
-        const siteIdNum = toSiteIdNumber(article.site_id ?? article.siteId);
+        const siteIdNum = toSiteIdNumber(article.site_id ?? article.siteId) ?? 0; // 0 para posts sem site
         const dateVal = article.published_at ?? article.publishedAt ?? article.created_at ?? article.createdAt;
         return {
           id: `api-article-${article.id}`,
@@ -194,11 +195,10 @@ export function Calendario({ userData, onUpdateUser }: CalendarioProps) {
   ];
   const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
-  // Nome do site
+  // Nome do site - usando função utilitária global
   const getSiteName = useCallback((siteId: number | null) => {
-    if (siteId == null) return 'Site';
-    const site = state.sites.find((s: any) => s.id === siteId || String(s.id) === String(siteId));
-    return site?.nome || `Site ${siteId}`;
+    if (siteId == null || siteId === 0) return 'Sem Site';
+    return getSiteNameUtil(state.sites, siteId);
   }, [state.sites]);
 
   // Sites disponíveis
@@ -208,12 +208,25 @@ export function Calendario({ userData, onUpdateUser }: CalendarioProps) {
     const apiSiteIds = apiArticles.map((p: any) => p.siteId);
     const allSiteIds = [...articleSiteIds, ...ideaSiteIds, ...apiSiteIds];
     const uniqueSiteIds = [...new Set(allSiteIds)];
-    const filteredSiteIds = uniqueSiteIds.filter(Boolean);
+    
+    // Incluir sites válidos e o site padrão (0) se houver posts sem site
+    const validSiteIds = uniqueSiteIds.filter(id => {
+      const num = toSiteIdNumber(id);
+      return num !== null;
+    });
+    
+    // Verificar se há posts com siteId 0 (sem site)
+    const hasPostsWithoutSite = allSiteIds.includes(0) || allSiteIds.includes(null) || allSiteIds.includes(undefined);
+    if (hasPostsWithoutSite && !validSiteIds.includes(0)) {
+      validSiteIds.push(0);
+    }
 
-    return filteredSiteIds.map((siteId: any) => {
-      const idNum = toSiteIdNumber(siteId)!;
-      return { id: idNum, name: getSiteName(idNum) };
-    }).sort((a, b) => a.name.localeCompare(b.name));
+    return validSiteIds
+      .map((siteId: any) => {
+        const idNum = toSiteIdNumber(siteId) ?? 0;
+        return { id: idNum, name: getSiteName(idNum) };
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [state.articles, state.ideas, apiArticles, getSiteName]);
 
   // Coleta de posts normalizados (API publicados + locais + agendamentos API)
@@ -242,7 +255,7 @@ export function Calendario({ userData, onUpdateUser }: CalendarioProps) {
       if (article.status?.toLowerCase() === 'publicado') {
         if (seenArticleIds.has(article.id)) return; // Evitar duplicata
         
-        const siteIdNum = toSiteIdNumber(article.siteId ?? article.site_id);
+        const siteIdNum = toSiteIdNumber(article.siteId ?? article.site_id) ?? 0; // 0 para posts sem site
         const dateVal = article.publishedAt || article.createdAt;
         const dateKey = toDateKey(dateVal);
         if (!dateKey) return;
@@ -276,11 +289,12 @@ export function Calendario({ userData, onUpdateUser }: CalendarioProps) {
     // (C) agendados — local (apenas se não estiver já processado)
     state.articles.forEach((article: any) => {
       const isScheduled = /(agendado)$/i.test(article.status || '');
-      if (isScheduled && article.scheduledDate) {
+      const scheduledDate = article.scheduledDate || article.scheduled_date;
+      if (isScheduled && scheduledDate) {
         if (seenArticleIds.has(article.id)) return; // Evitar duplicata
         
-        const siteIdNum = toSiteIdNumber(article.siteId ?? article.site_id);
-        const dateKey = toDateKey(article.scheduledDate);
+        const siteIdNum = toSiteIdNumber(article.siteId ?? article.site_id) ?? 0; // 0 para posts sem site
+        const dateKey = toDateKey(scheduledDate);
         if (!dateKey) return;
         
         seenArticleIds.add(article.id);
@@ -288,7 +302,7 @@ export function Calendario({ userData, onUpdateUser }: CalendarioProps) {
           id: `local-scheduled-${article.id}`,
           title: article.titulo,
           content: article.conteudo || '',
-          date: article.scheduledDate,
+          date: scheduledDate,
           dateKey,
           type: 'scheduled',
           status: 'Agendado localmente',
@@ -311,7 +325,7 @@ export function Calendario({ userData, onUpdateUser }: CalendarioProps) {
 
       const siteIdNum = toSiteIdNumber(
         agendamento.site_id ?? agendamento.site?.id ?? article.site_id ?? article.siteId
-      );
+      ) ?? 0; // 0 para posts sem site
       const dateVal = agendamento.data_agendamento;
       const dateKey = toDateKey(dateVal);
       if (!dateKey) return;
@@ -377,17 +391,21 @@ export function Calendario({ userData, onUpdateUser }: CalendarioProps) {
       },
       postsPublicados: posts.filter(p => p.type === 'published').length,
       postsComURL: posts.filter(p => p.url && p.url !== '#').length,
-      postsPublicadosComURL: posts.filter(p => p.type === 'published' && p.url && p.url !== '#').length
+      postsPublicadosComURL: posts.filter(p => p.type === 'published' && p.url && p.url !== '#').length,
+      postsSemSite: posts.filter(p => p.siteId === 0).length,
+      siteIds: [...new Set(posts.map(p => p.siteId))].sort()
     });
 
     return posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [apiArticles, state.articles, agendamentos]);
 
-  // Filtrar por site (siteId normalizado)
+  // Filtrar por site - compatível com UUIDs e números
   const filteredPosts = useMemo(() => {
     if (selectedSiteId === 'all') return allPosts;
-    const idNum = toSiteIdNumber(selectedSiteId);
-    return allPosts.filter(post => post.siteId === idNum);
+    return allPosts.filter(post => 
+      post.siteId === selectedSiteId || 
+      post.siteId.toString() === selectedSiteId.toString()
+    );
   }, [allPosts, selectedSiteId]);
 
   // Posts por dia via dateKey (evita bugs de timezone)
@@ -739,14 +757,14 @@ export function Calendario({ userData, onUpdateUser }: CalendarioProps) {
                 <Label className="font-montserrat font-medium text-foreground">Filtrar por Site</Label>
               </div>
 
-              <Select value={selectedSiteId.toString()} onValueChange={(value) => handleFilterChange('site', value === 'all' ? 'all' : parseInt(value))}>
+              <Select value={selectedSiteId?.toString() || 'all'} onValueChange={(value) => handleFilterChange('site', value === 'all' ? 'all' : value)}>
                 <SelectTrigger className="w-48 h-11">
                   <SelectValue placeholder="Site" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos os Sites</SelectItem>
                   {availableSites.map(site => (
-                    <SelectItem key={site.id} value={site.id.toString()}>
+                    <SelectItem key={site.id} value={site.id?.toString() || ''}>
                       {site.name}
                     </SelectItem>
                   ))}

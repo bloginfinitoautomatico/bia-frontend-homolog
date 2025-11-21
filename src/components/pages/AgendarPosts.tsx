@@ -19,6 +19,18 @@ export function AgendarPosts({ userData }: AgendarPostsProps) {
   const { state, actions } = useBia();
   const { dashboardData, loading: isDashboardLoading, error: dashboardError } = useDashboard();
   
+  // Verificação de segurança inicial - prevenir "tela azul"
+  if (!state || !state.sites || !state.articles) {
+    return (
+      <div className="p-4">
+        <div className="flex items-center justify-center space-x-2">
+          <Loader2 className="h-6 w-6 animate-spin" style={{ color: '#8c52ff' }} />
+          <span className="font-montserrat text-foreground">Carregando dados...</span>
+        </div>
+      </div>
+    );
+  }
+  
   // Função auxiliar para converter data para string no fuso horário do Brasil
   const formatDateToBrazilTime = (date: Date): string => {
     // Criar uma nova data ajustada para UTC-3 (Brasília)
@@ -73,57 +85,115 @@ export function AgendarPosts({ userData }: AgendarPostsProps) {
   const [progress, setProgress] = useState(0);
 
   // Sites WordPress conectados (verificar se tem configuração WordPress)
-  const connectedSites = state.sites.filter(site => 
-    site.status === 'ativo' && 
-    site.wordpressUrl && 
-    site.wordpressUsername && 
-    site.wordpressPassword
-  );
+  const connectedSites = React.useMemo(() => {
+    try {
+      if (!Array.isArray(state.sites)) {
+        console.warn('🚨 state.sites não é um array:', state.sites);
+        return [];
+      }
+      
+      return state.sites.filter(site => {
+        if (!site) return false;
+        return (
+          site.status === 'ativo' && 
+          site.wordpressUrl && 
+          site.wordpressUsername && 
+          site.wordpressPassword
+        );
+      });
+    } catch (error) {
+      console.error('🚨 Erro ao filtrar sites conectados:', error);
+      return [];
+    }
+  }, [state.sites]);
 
   // Artigos disponíveis para agendamento (rascunho sem data de agendamento)
-  const availableArticles = state.articles.filter(article => {
-    // Verificar se é rascunho (case insensitive para compatibilidade)
-    const isRascunho = article.status?.toLowerCase() === 'rascunho';
-    const hasNoScheduleDate = !article.scheduledDate && !article.publishedDate;
-    const isAvailable = isRascunho && hasNoScheduleDate;
-    
-    const isSiteSelected = formData.siteId ? 
-      (article.siteId.toString() === formData.siteId.toString()) : 
-      true;
-    
-    console.log(`🔍 DEBUG Agendamento - Artigo "${article.titulo}":`, {
-      status: article.status,
-      isRascunho,
-      hasNoScheduleDate,
-      isAvailable,
-      siteId: article.siteId,
-      selectedSiteId: formData.siteId,
-      isSiteSelected,
-      finalResult: isAvailable && isSiteSelected
-    });
-    
-    return isAvailable && isSiteSelected;
-  });
+  const availableArticles = React.useMemo(() => {
+    try {
+      if (!Array.isArray(state.articles)) {
+        console.warn('🚨 state.articles não é um array:', state.articles);
+        return [];
+      }
+      
+      return state.articles.filter(article => {
+        try {
+          if (!article) return false;
+          
+          // Verificar se é rascunho (case insensitive para compatibilidade)
+          const isRascunho = article.status?.toLowerCase() === 'rascunho';
+          const hasNoScheduleDate = !article.scheduledDate && !article.publishedDate;
+          const isAvailable = isRascunho && hasNoScheduleDate;
+          
+          // Verificação segura de siteId - proteger contra valores null/undefined
+          const isSiteSelected = formData.siteId ? 
+            (article.siteId && article.siteId.toString() === formData.siteId.toString()) : 
+            true;
+          
+          console.log(`🔍 DEBUG Agendamento - Artigo "${article.titulo}":`, {
+            status: article.status,
+            isRascunho,
+            hasNoScheduleDate,
+            isAvailable,
+            siteId: article.siteId,
+            selectedSiteId: formData.siteId,
+            isSiteSelected,
+            finalResult: isAvailable && isSiteSelected
+          });
+          
+          return isAvailable && isSiteSelected;
+        } catch (error) {
+          console.error('🚨 Erro ao filtrar artigo para agendamento:', error, article);
+          return false;
+        }
+      });
+    } catch (error) {
+      console.error('🚨 Erro geral ao filtrar artigos:', error);
+      return [];
+    }
+  }, [state.articles, formData.siteId]);
 
   // Artigos já agendados
-  const scheduledArticles = state.articles.filter(article => 
-    article.status === 'Agendado' && article.scheduledDate
-  );
+  const scheduledArticles = React.useMemo(() => {
+    try {
+      if (!Array.isArray(state.articles)) {
+        return [];
+      }
+      
+      return state.articles.filter(article => {
+        if (!article) return false;
+        return article.status === 'Agendado' && article.scheduledDate;
+      });
+    } catch (error) {
+      console.error('🚨 Erro ao filtrar artigos agendados:', error);
+      return [];
+    }
+  }, [state.articles]);
 
-  // Site selecionado
-  const selectedSite = formData.siteId 
-    ? connectedSites.find(site => site.id.toString() === formData.siteId)
-    : null;
+  // Site selecionado com proteção contra erros
+  const selectedSite = React.useMemo(() => {
+    try {
+      return formData.siteId 
+        ? connectedSites.find(site => site?.id && site.id.toString() === formData.siteId)
+        : null;
+    } catch (error) {
+      console.error('🚨 Erro ao encontrar site selecionado:', error);
+      return null;
+    }
+  }, [formData.siteId, connectedSites]);
 
   // Atualizar total baseado nos artigos disponíveis
   useEffect(() => {
-    if (availableArticles.length > 0 && formData.total > availableArticles.length) {
-      setFormData(prev => ({
-        ...prev,
-        total: Math.min(10, availableArticles.length)
-      }));
+    try {
+      if (availableArticles?.length > 0 && formData.total > availableArticles.length) {
+        setFormData(prev => ({
+          ...prev,
+          total: Math.min(10, availableArticles.length)
+        }));
+      }
+    } catch (error) {
+      console.error('🚨 Erro ao atualizar total baseado em artigos disponíveis:', error);
     }
-  }, [availableArticles.length, formData.total]);
+  }, [availableArticles?.length, formData.total]);
 
   const getFrequencyLabel = (freq: string) => {
     switch (freq) {
@@ -217,18 +287,25 @@ export function AgendarPosts({ userData }: AgendarPostsProps) {
   };
 
   const handleSchedule = async () => {
-    if (!formData.siteId) {
-      toast.error('Selecione um site para agendar os posts.');
-      return;
-    }
+    try {
+      if (!formData.siteId) {
+        toast.error('Selecione um site para agendar os posts.');
+        return;
+      }
 
-    if (availableArticles.length === 0) {
-      toast.error(`Você não tem artigos rascunho disponíveis para o site ${selectedSite?.nome || 'selecionado'}.`);
-      return;
-    }
+      const articlesLength = availableArticles?.length || 0;
+      if (articlesLength === 0) {
+        toast.error(`Você não tem artigos rascunho disponíveis para o site ${selectedSite?.nome || 'selecionado'}.`);
+        return;
+      }
 
-    if (formData.total > availableArticles.length) {
-      toast.error(`Você só tem ${availableArticles.length} artigos disponíveis para este site.`);
+      if (formData.total > articlesLength) {
+        toast.error(`Você só tem ${articlesLength} artigos disponíveis para este site.`);
+        return;
+      }
+    } catch (error) {
+      console.error('🚨 Erro nas validações iniciais do agendamento:', error);
+      toast.error('Erro interno nas validações. Tente novamente.');
       return;
     }
 
@@ -441,7 +518,7 @@ export function AgendarPosts({ userData }: AgendarPostsProps) {
                     {formData.siteId ? `Artigos Disponíveis (${selectedSite?.nome})` : 'Artigos Disponíveis'}
                   </p>
                   <p className="font-poppins text-xl font-medium text-foreground">
-                    {availableArticles.length}
+                    {availableArticles?.length || 0}
                   </p>
                   <p className="font-montserrat text-xs text-muted-foreground">
                     Prontos para agendamento
@@ -460,7 +537,7 @@ export function AgendarPosts({ userData }: AgendarPostsProps) {
                     Sites Conectados
                   </p>
                   <p className="font-poppins text-xl font-medium text-foreground">
-                    {connectedSites.length}
+                    {connectedSites?.length || 0}
                   </p>
                   <p className="font-montserrat text-xs text-muted-foreground">
                     Com WordPress ativo
@@ -479,7 +556,7 @@ export function AgendarPosts({ userData }: AgendarPostsProps) {
                     Posts Agendados
                   </p>
                   <p className="font-poppins text-xl font-medium text-foreground">
-                    {scheduledArticles.length}
+                    {scheduledArticles?.length || 0}
                   </p>
                   <p className="font-montserrat text-xs text-muted-foreground">
                     Aguardando publicação
@@ -501,7 +578,7 @@ export function AgendarPosts({ userData }: AgendarPostsProps) {
         </Alert>
       )}
 
-      {formData.siteId && availableArticles.length === 0 && (
+      {formData.siteId && (availableArticles?.length || 0) === 0 && (
         <Alert className="border-orange-200 bg-orange-50">
           <AlertCircle className="h-4 w-4" style={{ color: '#8c52ff' }} />
           <AlertDescription className="text-orange-800">
@@ -549,21 +626,38 @@ export function AgendarPosts({ userData }: AgendarPostsProps) {
               </Label>
               <Select 
                 value={formData.siteId} 
-                onValueChange={(value) => setFormData({...formData, siteId: value, total: 1})}
+                onValueChange={(value) => {
+                  try {
+                    setFormData({...formData, siteId: value, total: 1});
+                  } catch (error) {
+                    console.error('🚨 Erro ao selecionar site:', error);
+                  }
+                }}
                 disabled={isScheduling}
               >
                 <SelectTrigger className="font-montserrat">
                   <SelectValue placeholder="Escolha um site WordPress conectado" />
                 </SelectTrigger>
                 <SelectContent>
-                  {connectedSites.map(site => (
-                    <SelectItem key={site.id} value={site.id.toString()}>
-                      {site.nome} - {site.url}
+                  {connectedSites && connectedSites.length > 0 ? (
+                    connectedSites.map(site => {
+                      if (!site?.id || !site?.nome) {
+                        return null;
+                      }
+                      return (
+                        <SelectItem key={site.id} value={site.id.toString()}>
+                          {site.nome} - {site.url || 'URL não definida'}
+                        </SelectItem>
+                      );
+                    }).filter(Boolean)
+                  ) : (
+                    <SelectItem value="" disabled>
+                      Nenhum site conectado
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
-              {connectedSites.length === 0 && (
+              {(connectedSites?.length || 0) === 0 && (
                 <p className="font-montserrat text-sm text-red-600">
                   Nenhum site WordPress conectado encontrado
                 </p>
@@ -578,14 +672,14 @@ export function AgendarPosts({ userData }: AgendarPostsProps) {
                   id="total"
                   type="number"
                   min="1"
-                  max={availableArticles.length || 1}
+                  max={(availableArticles?.length || 1)}
                   value={formData.total}
                   onChange={(e) => setFormData({...formData, total: parseInt(e.target.value) || 1})}
                   className="font-montserrat"
-                  disabled={isScheduling || availableArticles.length === 0}
+                  disabled={isScheduling || (availableArticles?.length || 0) === 0}
                 />
                 <p className="font-montserrat text-sm text-gray-500">
-                  {availableArticles.length} artigos rascunho disponíveis para {selectedSite?.nome}
+                  {availableArticles?.length || 0} artigos rascunho disponíveis para {selectedSite?.nome || 'site selecionado'}
                 </p>
               </div>
             )}
@@ -692,7 +786,7 @@ export function AgendarPosts({ userData }: AgendarPostsProps) {
             {formData.siteId && (
               <Button 
                 onClick={handleSchedule}
-                disabled={isScheduling || !formData.siteId || availableArticles.length === 0 || formData.total > availableArticles.length}
+                disabled={isScheduling || !formData.siteId || (availableArticles?.length || 0) === 0 || formData.total > (availableArticles?.length || 0)}
                 className="w-full font-montserrat text-white"
                 style={{ backgroundColor: '#8c52ff' }}
               >

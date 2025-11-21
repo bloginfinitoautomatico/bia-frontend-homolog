@@ -10,6 +10,7 @@ import { Trash2, XCircle, RotateCcw, Clock, CheckCircle, AlertCircle, Star, BarC
 import { useBia } from '../BiaContext';
 import { useDashboard } from '../../hooks/useDashboard';
 import { toast } from 'sonner';
+import { getSiteName } from '../../utils/siteUtils';
 
 interface ExcluidosProps {
   userData: any;
@@ -71,10 +72,12 @@ export function Excluidos({ userData }: ExcluidosProps) {
   const getFilteredIdeias = () => {
     let filtered = getAllIdeasByStatus();
     
-    // Filtro por site
+    // Filtro por site - compatível com UUIDs e números
     if (filterSite !== 'all') {
-      const siteId = parseInt(filterSite);
-      filtered = filtered.filter(idea => idea.siteId === siteId);
+      filtered = filtered.filter(idea => 
+        idea.siteId === filterSite || 
+        idea.siteId.toString() === filterSite.toString()
+      );
     }
     
     // Filtro por busca
@@ -348,7 +351,7 @@ export function Excluidos({ userData }: ExcluidosProps) {
                           <Monitor size={14} style={{ color: '#8c52ff' }} />
                           <span className="font-montserrat text-muted-foreground">
                             Site: {idea.siteId 
-                              ? state.sites.find(s => s.id === idea.siteId)?.nome || 'Site não encontrado'
+                              ? getSiteName(state.sites, idea.siteId)
                               : 'Não vinculado'}
                           </span>
                         </div>

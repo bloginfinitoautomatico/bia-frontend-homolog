@@ -51,7 +51,7 @@ export interface Article {
   image_url?: string;
   status: string;
   site_id?: number;
-  ideia_id?: number;
+  ideia_id?: number | string;
   categoria?: string;
   tags?: string[];
   seo_data?: any;
@@ -68,8 +68,8 @@ export interface CreateArticlePayload {
   image_url?: string | null;
   categoria: string;
   tags?: string | null; // JSON string no backend
-  site_id?: number | null;
-  ideia_id?: number | null;
+  site_id?: number | string | null;
+  ideia_id?: number | string | null;
   status: 'rascunho' | 'publicado' | 'agendado';
   seo_data?: string | null; // JSON string no backend
   generation_params?: string | null; // JSON string no backend
@@ -88,10 +88,17 @@ export async function createArticle(payload: CreateArticlePayload) {
     const url = getApiUrl('/artigos');
     console.log('🔗 URL da requisição:', url);
     
+    // Garantir que site_id e ideia_id sejam strings quando presentes (backend espera UUID strings)
+    const safePayload = {
+      ...payload,
+      site_id: payload.site_id != null ? String(payload.site_id) : null,
+      ideia_id: payload.ideia_id != null ? String(payload.ideia_id) : null,
+    } as CreateArticlePayload;
+
     const res = await fetch(url, {
       method: 'POST',
       headers: getAuthHeaders(),
-      body: JSON.stringify(payload)
+      body: JSON.stringify(safePayload)
     });
 
     console.log('📨 Status da resposta:', res.status, res.statusText);

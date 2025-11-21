@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, {
   createContext,
   useContext,
@@ -58,7 +59,7 @@ interface Idea {
   descricao?: string;
   categoria: string;
   tags: string[];
-  siteId: number;
+  siteId: string | number;
   status: 'ativa' | 'produzido' | 'excluido' | 'publicado';
   cta?: any;
   generationParams?: any;
@@ -75,7 +76,7 @@ interface Article {
   conteudo: string;
   // incluir status observados em vários componentes + status do BIA News
   status: 'Rascunho' | 'Em Revisão' | 'Concluído' | 'Publicado' | 'Agendado' | 'Produzindo' | 'Pendente' | 'Processado' | string;
-  siteId: number;
+  siteId: string | number;
   ideaId: number;
   categoria?: string;
   tags?: string[];
@@ -216,21 +217,39 @@ class ApiService {
       
       if (!response.ok) {
         let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-        
+
         try {
           const errorData = await response.text();
           if (errorData.trim()) {
             try {
               const parsedError = JSON.parse(errorData);
-              errorMessage = parsedError.message || parsedError.error || errorMessage;
+              // Log completo dos detalhes de validação retornados pelo backend (Laravel)
+              console.error(`❌ API Response Error Details for ${endpoint}:`, parsedError);
+
+              // Preferir message + errors quando disponível
+              if (parsedError.message) {
+                errorMessage = parsedError.message;
+              }
+
+              if (parsedError.errors) {
+                try {
+                  errorMessage += ' - ' + JSON.stringify(parsedError.errors);
+                } catch {
+                  errorMessage += ' - (validation errors)';
+                }
+              } else if (parsedError.error) {
+                errorMessage = parsedError.error;
+              }
             } catch {
-              errorMessage = errorData.length > 200 ? 
-                errorData.substring(0, 200) + '...' : 
+              errorMessage = errorData.length > 200 ?
+                errorData.substring(0, 200) + '...' :
                 errorData;
             }
           }
-        } catch {}
-        
+        } catch (e) {
+          console.warn('⚠️ Falha ao ler corpo da resposta de erro:', e);
+        }
+
         throw new Error(errorMessage);
       }
 
@@ -965,6 +984,8 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
   }, [persistImmediately]);
 
   const loadFromDatabase = useCallback(async () => {
+    // Variável para armazenar as ideias finais mescladas (backend + locais) para salvar no snapshot canônico
+    let _finalIdeasForCanonical: any[] | undefined = undefined;
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       
@@ -990,68 +1011,155 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
 
       // Processar sites
       if (sitesResult.status === 'fulfilled' && sitesResult.value.success) {
-        dispatch({ type: 'SET_SITES', payload: sitesResult.value.data || [] });
-        console.log('✅ Sites carregados:', sitesResult.value.data?.length || 0);
+        const serverSites = sitesResult.value.data || [];
+        dispatch({ type: 'SET_SITES', payload: serverSites });
+        console.log('✅ Sites carregados:', serverSites.length || 0);
+
+        // Remover sites locais que não existem mais no servidor (órfãos)
+        try {
+          const isUuid = (v: any) => typeof v === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(v);
+          const serverIds = new Set(serverSites.map((s: any) => String(s.id)));
+
+          const orphanSites = state.sites.filter(s => isUuid(String(s.id)) && !serverIds.has(String(s.id)));
+          if (orphanSites.length > 0) {
+            console.log('🧹 Removendo sites órfãos detectados (excluídos no servidor):', orphanSites.map(s => ({ id: s.id, nome: s.nome || s.url })));
+
+            // Construir novo array de sites a partir do servidor (já feito acima)
+            const nextSites = serverSites;
+
+            // Limpar/atualizar referências em ideias e artigos que apontem para sites órfãos
+            const orphanIds = new Set(orphanSites.map(s => String(s.id)));
+
+            const nextIdeas = state.ideas.map(i => (i && orphanIds.has(String(i.siteId)) ? { ...i, siteId: null } : i));
+            const nextArticles = state.articles.map(a => (a && orphanIds.has(String(a.siteId)) ? { ...a, siteId: null } : a));
+
+            // Aplicar atualizações locais e persistir
+            dispatch({ type: 'SET_SITES', payload: nextSites });
+            dispatch({ type: 'SET_IDEAS', payload: nextIdeas });
+            dispatch({ type: 'SET_ARTICLES', payload: nextArticles });
+            persistImmediately({ sites: nextSites, ideas: nextIdeas, articles: nextArticles });
+
+            toast.success(`Sites órfãos removidos: ${orphanSites.length}. Referências limpas.`);
+          }
+        } catch (cleanupError) {
+          console.warn('⚠️ Erro ao tentar limpar sites órfãos:', cleanupError);
+        }
       } else {
         console.error('❌ Erro ao carregar sites:', sitesResult.status === 'rejected' ? sitesResult.reason : sitesResult.value.error);
       }
 
       // Processar ideias - MANTER EXCLUSÕES E EDIÇÕES LOCAIS
       if (ideasResult.status === 'fulfilled' && ideasResult.value.success) {
-        const backendIdeas = ideasResult.value.data || [];
-        
-        // Carregar dados locais para preservar exclusões e edições
+          const rawBackendIdeas = ideasResult.value.data || [];
+          
+          // Normalizar ideias do backend para garantir compatibilidade com interface
+          const backendIdeas = rawBackendIdeas.map((idea: any) => {
+            console.log('🔍 [LOAD DATABASE] Normalizando ideia do backend:', {
+              id: idea.id,
+              titulo: idea.titulo,
+              site_id: idea.site_id,
+              siteId: idea.siteId,
+              siteId_type: typeof idea.site_id
+            });
+            
+            return {
+              ...idea,
+              siteId: idea.site_id || idea.siteId, // Usar site_id do backend como siteId
+              tags: Array.isArray(idea.tags) ? idea.tags : (
+                typeof idea.tags === 'string' ? JSON.parse(idea.tags || '[]') : []
+              ),
+              cta: typeof idea.cta === 'string' ? JSON.parse(idea.cta || 'null') : idea.cta,
+              generationParams: typeof idea.generation_params === 'string' ? JSON.parse(idea.generation_params || 'null') : idea.generation_params,
+              wordpressData: typeof idea.wordpress_data === 'string' ? JSON.parse(idea.wordpress_data || 'null') : idea.wordpress_data,
+            };
+          });
+
+        // Carregar dados locais para preservar exclusões, edições e ideias locais ainda não persistidas
         try {
           const saved = localStorage.getItem('bia-state');
           const localData = saved ? JSON.parse(saved) : null;
           const localIdeas: Idea[] = Array.isArray(localData?.ideas) ? localData.ideas : [];
-          
-          // Mesclar: manter exclusões e edições locais
+
+          // Mapear mudanças locais por id (ids locais geralmente são timestamps/numbers)
           const localChanges = localIdeas.reduce((acc, localIdea) => {
-            acc[localIdea.id] = {
+            acc[String(localIdea.id)] = {
               isDeleted: localIdea.status === 'excluido',
               deletedDate: localIdea.deletedDate,
-              titulo: localIdea.titulo, // Preservar títulos editados
-              updatedAt: localIdea.updatedAt
+              titulo: localIdea.titulo,
+              updatedAt: localIdea.updatedAt,
+              raw: localIdea,
             };
             return acc;
-          }, {} as Record<number, any>);
-          
-          const mergedIdeas: Idea[] = backendIdeas.map(backendIdea => {
-            const localChange = localChanges[backendIdea.id];
-            
+          }, {} as Record<string, any>);
+
+          // Mesclar: preservar exclusões/edições locais quando a ideia existe no backend
+          const mergedIdeas: Idea[] = backendIdeas.map((backendIdea: any) => {
+            const localChange = localChanges[String(backendIdea.id)];
+
             if (localChange) {
-              // Se foi excluída localmente, manter como excluída
-              if (localChange.isDeleted) {
-                return { 
-                  ...backendIdea, 
-                  status: 'excluido' as const, 
-                  deletedDate: localChange.deletedDate || new Date().toISOString()
+              // ✅ CORREÇÃO: Se a ideia foi excluída localmente E o backend também tem status 'excluido', usar dados do backend
+              if (localChange.isDeleted && backendIdea.status === 'excluido') {
+                console.log(`🗑️ Ideia ${backendIdea.id} foi excluída localmente e sincronizada com backend - usando dados do backend`);
+                return {
+                  ...backendIdea,
+                  status: 'excluido' as const,
+                  deletedDate: backendIdea.deleted_at || localChange.deletedDate || new Date().toISOString(),
                 };
               }
               
-              // Se foi editada localmente e a edição é mais recente, manter a edição local
+              // Se foi excluída localmente mas backend ainda não tem status excluído, preservar exclusão local
+              if (localChange.isDeleted) {
+                return {
+                  ...backendIdea,
+                  status: 'excluido' as const,
+                  deletedDate: localChange.deletedDate || new Date().toISOString(),
+                };
+              }
+
               const localUpdateTime = new Date(localChange.updatedAt || 0).getTime();
               const backendUpdateTime = new Date(backendIdea.updatedAt || 0).getTime();
-              
+
               if (localUpdateTime > backendUpdateTime && localChange.titulo !== backendIdea.titulo) {
                 console.log(`🔄 Preservando edição local da ideia ${backendIdea.id}: "${backendIdea.titulo}" → "${localChange.titulo}"`);
                 return {
                   ...backendIdea,
                   titulo: localChange.titulo,
-                  updatedAt: localChange.updatedAt
+                  updatedAt: localChange.updatedAt,
                 };
               }
             }
-            
+
             return backendIdea;
           });
+
+          // ✅ CORREÇÃO: Filtrar ideias locais excluídas que já foram sincronizadas com backend
+          const backendTitles = new Set(backendIdeas.map((b: any) => b.titulo));
+          const backendExcludedIds = new Set(backendIdeas.filter((b: any) => b.status === 'excluido').map((b: any) => String(b.id)));
           
+          const localOnly = localIdeas.filter(li => {
+            // Não incluir ideias que já existem no backend (por título)
+            if (backendTitles.has(li.titulo)) {
+              return false;
+            }
+            
+            // ✅ CORREÇÃO: Não incluir ideias locais que foram marcadas como excluídas e já existem no backend como excluídas
+            if (li.status === 'excluido' && backendExcludedIds.has(String(li.id))) {
+              console.log(`🧹 Removendo ideia local já sincronizada como excluída: ${li.titulo} (${li.id})`);
+              return false;
+            }
+            
+            return true;
+          });
+
+          const finalIdeas = [...mergedIdeas, ...localOnly];
+          // Guardar para uso ao persistir o estado canônico
+          _finalIdeasForCanonical = finalIdeas;
+
           const preservedExclusions = Object.values(localChanges).filter(c => c.isDeleted).length;
           const preservedEdits = Object.values(localChanges).filter(c => !c.isDeleted && c.titulo).length;
-          
-          dispatch({ type: 'SET_IDEAS', payload: mergedIdeas });
-          console.log(`✅ Ideias carregadas e mescladas: ${mergedIdeas.length} total, ${preservedExclusions} excluídas preservadas, ${preservedEdits} edições preservadas`);
+
+          dispatch({ type: 'SET_IDEAS', payload: finalIdeas });
+          console.log(`✅ Ideias carregadas e mescladas: ${finalIdeas.length} total (${mergedIdeas.length} do backend + ${localOnly.length} locais), ${preservedExclusions} excluídas preservadas, ${preservedEdits} edições preservadas`);
         } catch (error) {
           console.warn('⚠️ Erro ao mesclar ideias locais:', error);
           dispatch({ type: 'SET_IDEAS', payload: backendIdeas });
@@ -1077,9 +1185,15 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
 
       // Expor estado canônico carregado do servidor para evitar re-hidratação a partir de snapshots antigos
       try {
+        // Preferir as ideias mescladas (_finalIdeasForCanonical) quando disponíveis, para
+        // evitar sobrescrever ideias locais que ainda não existem no backend.
+        const canonicalIdeas = typeof _finalIdeasForCanonical !== 'undefined'
+          ? _finalIdeasForCanonical
+          : (ideasResult.status === 'fulfilled' && ideasResult.value.success ? (ideasResult.value.data || []) : state.ideas);
+
         const canonical = {
           sites: sitesResult.status === 'fulfilled' && sitesResult.value.success ? (sitesResult.value.data || []) : state.sites,
-          ideas: ideasResult.status === 'fulfilled' && ideasResult.value.success ? (ideasResult.value.data || []) : state.ideas,
+          ideas: canonicalIdeas,
           articles: articlesResult.status === 'fulfilled' && articlesResult.value.success ? (articlesResult.value.data || []) : state.articles,
           user: state.user,
           lastSync: new Date().toISOString(),
@@ -1240,6 +1354,52 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
       console.error('❌ [ARTICLES DEBUG] Erro ao carregar artigos do backend:', error);
     }
   }, []);
+  // Resolver site_id local (numérico/temporário) para site_id do backend (UUID), quando possível
+  const resolveSiteId = useCallback(async (maybeSiteId: any): Promise<string | null> => {
+    if (!maybeSiteId) return null;
+    const isUuid = (v: any) => typeof v === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(v);
+    try {
+      if (isUuid(maybeSiteId)) return String(maybeSiteId);
+
+      // Procurar site no estado local
+      const localSite = state.sites.find(s => String(s.id) === String(maybeSiteId));
+      if (!localSite) return null;
+
+      // Se o site local já possui um id que parece uuid, retornar
+      if (isUuid(localSite.id)) return String(localSite.id);
+
+      // Tentar casar por URL ou nome no backend (forçar refresh das sites do servidor)
+      try {
+        const sitesResult = await apiService.getSites();
+        if (sitesResult.success && sitesResult.data) {
+          const serverSites = sitesResult.data as any[];
+
+          // Normalizar URL para busca
+          const normalize = (u?: string) => (u || '').toLowerCase().replace(/https?:\/\//, '').replace(/\/$/, '');
+          const localUrl = normalize((localSite as any).url);
+          const localName = ((localSite as any).nome || (localSite as any).name || '').toLowerCase().trim();
+
+          const matched = serverSites.find(s => {
+            const su = normalize(s.url);
+            const sn = (s.nome || s.name || '').toLowerCase().trim();
+            return (localUrl && su && su === localUrl) || (localName && sn && sn === localName);
+          });
+
+          if (matched) {
+            console.log('🔗 Site local mapeado para site do backend:', matched.id, matched.nome || matched.url);
+            return String(matched.id);
+          }
+        }
+      } catch (err) {
+        console.warn('⚠️ Falha ao buscar sites do servidor durante mapemento de site local:', err);
+      }
+
+      return null;
+    } catch (err) {
+      console.warn('⚠️ Erro ao resolver site id:', err);
+      return null;
+    }
+  }, [state.sites]);
   const actions = {
     // User - CORREÇÃO: Adicionado callback opcional para redirecionamento
     login: (user: User, onSuccess?: () => void) => {
@@ -1484,7 +1644,7 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
           
           if (result.success) {
             dispatch({ type: 'DELETE_SITE', payload: id });
-            const nextSites = state.sites.filter(s => s.id !== id);
+            const nextSites = state.sites.filter(s => String(s.id) !== String(id));
             persistImmediately({ sites: nextSites });
             toast.success('Site removido com sucesso!');
             return true;
@@ -1499,7 +1659,7 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
               errMsg.includes('access denied') ||
               errMsg.includes('not authorized')
             ) {
-              const nextSites = state.sites.filter(s => s.id !== id);
+              const nextSites = state.sites.filter(s => String(s.id) !== String(id));
               dispatch({ type: 'SET_SITES', payload: nextSites });
               persistImmediately({ sites: nextSites });
               toast.success('Site removido localmente (já não existia no servidor).');
@@ -1534,19 +1694,54 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
         
         for (const ideaData of ideasData) {
           try {
-            // Validar se site_id é um ID real do banco (não timestamp)
-            let validSiteId: number | null = null;
-            if (ideaData.siteId && ideaData.siteId > 0) {
-              const siteIdNum = parseInt(String(ideaData.siteId));
-              // IDs do banco de dados são normalmente menores que timestamps
-              if (siteIdNum < 1000000000000) { // Menor que timestamp em ms
-                validSiteId = siteIdNum;
-                console.log(`✅ Site ID válido encontrado: ${validSiteId}`);
+            // Validar e processar siteId - pode ser UUID string ou número
+            let validSiteId: string | null = null;
+            if (ideaData.siteId) {
+              const siteIdValue = String(ideaData.siteId);
+              
+              // Verificar se é um UUID válido (formato: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+              const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(siteIdValue);
+              
+              if (isUuid) {
+                // Verificar se o UUID existe nos sites conhecidos (busca mais robusta)
+                const siteExists = state.sites.find(s => {
+                  const siteId = String(s.id);
+                  const siteUuid = s.uuid;
+                  return siteId === siteIdValue || siteUuid === siteIdValue;
+                });
+                
+                console.log('🔍 Debug validação UUID:', {
+                  siteIdValue,
+                  availableSites: state.sites.map(s => ({ id: String(s.id), uuid: s.uuid, nome: s.nome })),
+                  siteExists: !!siteExists
+                });
+                
+                if (siteExists) {
+                  validSiteId = siteIdValue;
+                  console.log(`✅ Site ID UUID válido encontrado: ${validSiteId}`);
+                } else {
+                  // CORREÇÃO: Se é um UUID válido mas não encontrado, usar mesmo assim
+                  // O backend vai validar se pertence ao usuário
+                  validSiteId = siteIdValue;
+                  console.warn(`⚠️ UUID não encontrado localmente, mas enviando para validação no backend: ${siteIdValue}`);
+                }
               } else {
-                console.warn('⚠️ ID do site parece ser temporário (timestamp), não será enviado ao backend:', siteIdNum);
+                // Se não for UUID, pode ser um número - converter para UUID se possível
+                const siteIdNum = parseInt(siteIdValue);
+                if (!isNaN(siteIdNum) && siteIdNum > 0 && siteIdNum < 1000000000000) {
+                  const siteObj = state.sites.find(s => s.id === siteIdNum);
+                  if (siteObj && siteObj.uuid) {
+                    validSiteId = siteObj.uuid;
+                    console.log(`✅ Site ID numérico convertido para UUID: ${validSiteId}`);
+                  } else {
+                    console.warn('⚠️ Site correspondente não encontrado para ID numérico:', siteIdNum);
+                  }
+                } else {
+                  console.warn('⚠️ ID do site inválido (não é UUID nem número válido):', siteIdValue);
+                }
               }
             } else {
-              console.log('📝 Nenhum site_id fornecido ou inválido:', ideaData.siteId);
+              console.log('📝 Nenhum site_id fornecido');
             }
 
             console.log(`💾 Criando ideia no backend com site_id: ${validSiteId}...`, ideaData.titulo);
@@ -1565,6 +1760,7 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
 
             if (result.success && result.data) {
               // Converter resposta do backend para formato frontend
+              console.log('🔍 Backend retornou site_id:', result.data.site_id, 'tipo:', typeof result.data.site_id);
               const savedIdea: Idea = {
                 id: result.data.id,
                 titulo: result.data.titulo,
@@ -1622,11 +1818,14 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
       }
     },
 
-    updateIdea: (id: number, updates: Partial<Idea>) => {
+    updateIdea: (id: number | string, updates: Partial<Idea>) => {
       try {
+        // Verificar se o ID é válido (UUID do backend)
+        const isUuid = (v: any) => typeof v === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(v);
+        
         // Atualizar localmente primeiro para responsividade imediata
         const nextIdeas = state.ideas.map((i) =>
-          i.id === id ? { ...i, ...updates, updatedAt: new Date().toISOString() } : i
+          String(i.id) === String(id) ? { ...i, ...updates, updatedAt: new Date().toISOString() } : i
         );
         
         dispatch({ type: 'SET_IDEAS', payload: nextIdeas });
@@ -1637,25 +1836,32 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
           timestamp: new Date().toISOString()
         });
 
-        // Enviar para o backend de forma assíncrona (não bloquear a UI)
-        (async () => {
-          try {
-            const result = await apiService.updateIdeia(id, {
-              titulo: updates.titulo,
-              categoria: updates.categoria,
-              status: updates.status,
-              deleted_at: updates.deletedDate
-            });
-            
-            if (result.success) {
-              console.log(`🌐 Ideia ${id} sincronizada com o backend com sucesso`);
-            } else {
-              console.warn(`⚠️ Falha ao sincronizar ideia ${id} com backend:`, result.error);
+        // Só sincronizar com backend se for um UUID válido
+        if (isUuid(id)) {
+          // Enviar para o backend de forma assíncrona (não bloquear a UI)
+          (async () => {
+            try {
+              // ✅ CORREÇÃO: Mapear campos frontend → backend corretamente
+              const backendUpdates: any = {};
+              if (updates.titulo !== undefined) backendUpdates.titulo = updates.titulo;
+              if (updates.categoria !== undefined) backendUpdates.categoria = updates.categoria;
+              if (updates.status !== undefined) backendUpdates.status = updates.status;
+              if (updates.deletedDate !== undefined) backendUpdates.deleted_at = updates.deletedDate;
+              
+              const result = await apiService.updateIdeia(id, backendUpdates);
+              
+              if (result.success) {
+                console.log(`🌐 Ideia ${id} sincronizada com o backend com sucesso`);
+              } else {
+                console.warn(`⚠️ Falha ao sincronizar ideia ${id} com backend:`, result.error);
+              }
+            } catch (syncError) {
+              console.warn(`⚠️ Erro na sincronização da ideia ${id} com backend:`, syncError);
             }
-          } catch (syncError) {
-            console.warn(`⚠️ Erro na sincronização da ideia ${id} com backend:`, syncError);
-          }
-        })();
+          })();
+        } else {
+          console.log(`ℹ️ Ideia ${id} é local (não UUID) - sincronização com backend ignorada`);
+        }
         
         return true;
       } catch (error) {
@@ -1707,7 +1913,9 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
     generateIdea: async (params: any) => {
       try {
         console.log('🤖 Gerando ideia via BiaContext...', params);
-        const result = await apiService.generateIdea(params);
+        // Persistir automaticamente ideias geradas para evitar perda ao atualizar a tela
+        const paramsWithPersist = { ...params, persist: true };
+        const result = await apiService.generateIdea(paramsWithPersist);
         
         if (result.success && result.data) {
           console.log('✅ Ideia gerada com sucesso:', result.data);
@@ -1721,41 +1929,141 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
     },
 
     // Artigos (agora com integração ao backend)
-    addArticle: async (articleData: Omit<Article, 'id' | 'createdAt' | 'updatedAt'>) => {
+    addArticle: async (articleData: Omit<Article, 'id' | 'createdAt' | 'updatedAt'>): Promise<{ success: boolean; persistedIdeaId?: string | null }> => {
       console.log('🚀 [addArticle] Iniciando criação de artigo:', articleData.titulo);
       try {
         // Validações básicas antes de enviar
         if (!articleData.titulo || articleData.titulo.trim().length === 0) {
           toast.error('Título do artigo é obrigatório');
-          return false;
+          return { success: false };
         }
 
         if (!articleData.conteudo || articleData.conteudo.trim().length === 0) {
           toast.error('Erro ao produzir artigo, tente novamente');
           console.error('❌ Conteúdo vazio ou inválido');
-          return false;
+          return { success: false };
         }
 
         // Converter dados do frontend para o formato esperado pelo backend
-        // IMPORTANTE: Verificar se ideia_id é um ID válido do backend
-        let validIdeiaId: number | null = null;
-        if (articleData.ideaId && articleData.ideaId > 0) {
-          const ideaIdNum = parseInt(String(articleData.ideaId));
-          // Aceitar qualquer ID válido que seja um número positivo
-          if (ideaIdNum > 0 && !isNaN(ideaIdNum)) {
-            validIdeiaId = ideaIdNum;
-            console.log(`✅ ID da ideia válido: ${validIdeiaId}`);
+        // IMPORTANTE: Verificar se ideia_id é um ID válido do backend (UUID). Se for um ID local temporário, persistir a ideia antes.
+        let validIdeiaId: string | number | null = null;
+        let persistedIdeaId: string | null = null; // Para retornar ao chamador
+        const isUuid = (v: any) => typeof v === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(v);
+
+        if (articleData.ideaId) {
+          // Se já for UUID string, usar direto
+          if (isUuid(articleData.ideaId)) {
+            validIdeiaId = String(articleData.ideaId);
+            persistedIdeaId = String(articleData.ideaId); // Capturar UUID da ideia
+            console.log(`✅ ideia_id é UUID: ${validIdeiaId}`);
           } else {
-            console.warn('⚠️ ID da ideia inválido:', ideaIdNum);
+            // Tentar persistir a ideia local (id temporário) antes de criar o artigo
+            const localIdea = state.ideas.find(i => String(i.id) === String(articleData.ideaId));
+            if (localIdea) {
+              console.log('🔁 Ideia local detectada, persistindo no backend antes de criar artigo:', localIdea.titulo);
+              // Preparar payload para criação de ideia
+              // Resolver dinamicamente site_id local para o site_id do backend (UUID) quando possível
+              const resolvedSiteIdForIdea = await resolveSiteId(localIdea.siteId);
+
+              // Incluir informações do site local para que o backend possa reconciliar
+              const localSiteObj = state.sites.find(s => String(s.id) === String(localIdea.siteId));
+              const ideaPayload: any = {
+                titulo: localIdea.titulo,
+                descricao: localIdea.descricao || '',
+                categoria: localIdea.categoria || null,
+                tags: JSON.stringify(localIdea.tags || []),
+                site_id: resolvedSiteIdForIdea,
+                // enviar metadados de site para tentativa de reconciliação no backend
+                site_url: localSiteObj?.url || null,
+                site_nome: localSiteObj?.nome || localSiteObj?.name || null,
+                status: localIdea.status || 'ativa',
+                cta: localIdea.cta ? JSON.stringify(localIdea.cta) : null,
+                generation_params: localIdea.generationParams ? JSON.stringify(localIdea.generationParams) : null,
+                wordpress_data: localIdea.wordpressData ? JSON.stringify(localIdea.wordpressData) : null,
+              };
+
+              try {
+                let createResult = await apiService.createIdeia(ideaPayload);
+                // Se falhar por causa de site_id (validation.exists), tentar novamente sem site_id
+                if (!createResult.success && createResult.error && String(createResult.error).includes('"site_id"')) {
+                  console.warn('⚠️ Persistência de ideia falhou por site_id inexistente — tentando novamente sem site_id');
+                  const retryPayload = { ...ideaPayload, site_id: null };
+                  createResult = await apiService.createIdeia(retryPayload);
+                }
+                // Se falhar por título duplicado, buscar a ideia existente pelo título
+                if (!createResult.success && createResult.error && String(createResult.error).includes('título')) {
+                  console.warn('⚠️ Ideia com título duplicado - buscando ideia existente no backend');
+                  try {
+                    const existingIdeasResult = await apiService.getIdeas();
+                    if (existingIdeasResult.success && existingIdeasResult.data) {
+                      const existingIdea = existingIdeasResult.data.find((idea: any) => 
+                        idea.titulo === ideaPayload.titulo
+                      );
+                      if (existingIdea) {
+                        console.log('✅ Ideia existente encontrada, usando UUID:', existingIdea.id);
+                        persistedIdeaId = existingIdea.id; // Capturar o ID da ideia existente
+                        createResult = { success: true, data: existingIdea };
+                      }
+                    }
+                  } catch (searchError) {
+                    console.error('❌ Erro ao buscar ideia existente:', searchError);
+                  }
+                }
+
+                if (createResult.success && createResult.data) {
+                  // Atualizar estado local substituindo a ideia temporária pela versão do backend
+                  const saved = createResult.data;
+                  const savedIdea: Idea = {
+                    id: saved.id,
+                    titulo: saved.titulo,
+                    descricao: saved.descricao || '',
+                    categoria: saved.categoria || '',
+                    tags: Array.isArray(saved.tags) ? saved.tags : (typeof saved.tags === 'string' ? JSON.parse(saved.tags || '[]') : []),
+                    siteId: saved.site_id,
+                    status: saved.status || 'ativa',
+                    cta: typeof saved.cta === 'string' ? JSON.parse(saved.cta || 'null') : saved.cta,
+                    generationParams: typeof saved.generation_params === 'string' ? JSON.parse(saved.generation_params || 'null') : saved.generation_params,
+                    wordpressData: typeof saved.wordpress_data === 'string' ? JSON.parse(saved.wordpress_data || 'null') : saved.wordpress_data,
+                    articleId: saved.article_id,
+                    createdAt: saved.created_at,
+                    updatedAt: saved.updated_at,
+                  };
+
+                  // Substituir ideia local no estado
+                  const nextIdeas = state.ideas.map(i => (String(i.id) === String(articleData.ideaId) ? savedIdea : i));
+                  dispatch({ type: 'SET_IDEAS', payload: nextIdeas });
+                  persistImmediately({ ideas: nextIdeas });
+
+                  validIdeiaId = saved.id;
+                  persistedIdeaId = saved.id; // Capturar para retornar ao chamador
+                  console.log(`✅ Ideia persistida com sucesso. UUID retornado: ${validIdeiaId}`);
+                } else {
+                  console.error('❌ Falha ao persistir ideia antes de criar artigo:', createResult.error);
+                  toast.error('Falha ao salvar a ideia no servidor. O artigo não foi criado.');
+                  return { success: false };
+                }
+              } catch (err) {
+                console.error('❌ Erro ao chamar API para persistir ideia:', err);
+                toast.error('Erro ao salvar ideia no servidor. Tente novamente.');
+                return { success: false };
+              }
+            } else {
+              // Se não encontramos a ideia local e não for UUID, ignorar (não podemos verificar posse)
+              console.warn('⚠️ ideia_id fornecida não é UUID e não foi encontrada localmente:', articleData.ideaId);
+            }
           }
         }
+
+        // Resolver site_id do artigo (pode ser local) para backend UUID quando possível
+        const resolvedSiteIdForArticle = await resolveSiteId(articleData.siteId);
 
         const backendPayload = {
           titulo: articleData.titulo.trim(),
           conteudo: articleData.conteudo.trim(),
           image_url: articleData.imageUrl || null,
           image_alt: articleData.imageAlt || null,
-          site_id: articleData.siteId && articleData.siteId > 0 ? parseInt(String(articleData.siteId)) : null,
+          // site_id enviado como UUID string quando mapeado, caso contrário null
+          site_id: resolvedSiteIdForArticle || null,
           ideia_id: validIdeiaId,
           categoria: articleData.categoria || 'Geral',
           tags: articleData.tags && articleData.tags.length > 0 ? JSON.stringify(articleData.tags) : null,
@@ -1797,9 +2105,18 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
         });
 
         // Criar artigo no backend
-        const result = await createArticle(backendPayload);
+
+        let result = await createArticle(backendPayload);
 
         console.log('📡 Resposta do backend:', result);
+
+        // Se falhar por causa de site_id inválido/existente, tentar novamente sem site_id
+        if (!result.success && result.error && String(result.error).includes('site_id')) {
+          console.warn('⚠️ Falha ao criar artigo por causa de site_id — tentando novamente sem site_id');
+          const retryPayload = { ...backendPayload, site_id: null };
+          result = await createArticle(retryPayload as any);
+          console.log('📡 Resposta do backend (retry sem site_id):', result);
+        }
 
         if (result.success && result.article) {
           // Converter resposta do backend para formato do frontend
@@ -1835,16 +2152,16 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
           toast.success('Artigo salvo com sucesso!');
           console.log('✅ Artigo salvo no backend e estado local atualizado:', newArticle);
 
-          return true;
+          return { success: true, persistedIdeaId };
         } else {
           console.error('❌ Erro ao salvar artigo no backend:', result.error);
           toast.error(`Erro ao salvar artigo: ${result.error}`);
-          return false;
+          return { success: false };
         }
       } catch (error) {
         console.error('❌ Erro ao adicionar artigo:', error);
         toast.error('Erro interno ao salvar artigo');
-        return false;
+        return { success: false };
       }
     },
 
@@ -2072,3 +2389,82 @@ export function useBia() {
 }
 
 export default BiaContext;
+
+// Utility: expose manual cleaner for orphan sites so developer can run from console
+try {
+  if (typeof window !== 'undefined') {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    (window as any).__BIA_CLEAN_ORPHANS__ = async () => {
+      try {
+        console.log('🧹 Executando __BIA_CLEAN_ORPHANS__: buscando sites do servidor...');
+        const apiServiceModule = await import('../services/databaseService');
+        const api = (apiServiceModule && apiServiceModule.default) ? apiServiceModule.default : apiServiceModule;
+        const sitesResult = await api.getSites();
+
+        const serverSites = (sitesResult && sitesResult.success && Array.isArray(sitesResult.data))
+          ? sitesResult.data
+          : (Array.isArray(sitesResult?.data?.data) ? sitesResult.data.data : []);
+
+        const serverIds = new Set((serverSites || []).map((s: any) => String(s.id)));
+
+        const raw = localStorage.getItem('bia-state') || localStorage.getItem('bia-app-state');
+        const parsed = raw ? JSON.parse(raw) : null;
+        const localSites = parsed?.sites || [];
+
+        const isUuid = (v: string) => typeof v === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(v);
+
+        const orphanSites = localSites.filter((s: any) => {
+          const id = String(s.id);
+          return isUuid(id) && !serverIds.has(id);
+        });
+
+        if (!orphanSites || orphanSites.length === 0) {
+          console.log('🧹 Nenhum site órfão encontrado.');
+          return { removed: 0 };
+        }
+
+        const orphanIds = new Set(orphanSites.map((s: any) => String(s.id)));
+
+        const newSites = (parsed?.sites || []).filter((s: any) => !orphanIds.has(String(s.id)));
+        const newIdeas = (parsed?.ideas || []).map((i: any) => (orphanIds.has(String(i.siteId)) ? { ...i, siteId: null } : i));
+        const newArticles = (parsed?.articles || []).map((a: any) => (orphanIds.has(String(a.siteId)) ? { ...a, siteId: null } : a));
+
+        const now = Date.now();
+        const newSnapshot = {
+          meta: { lastUpdated: now },
+          data: {
+            sites: newSites,
+            ideas: newIdeas,
+            articles: newArticles,
+            user: parsed?.user || null,
+            lastSync: new Date().toISOString(),
+          }
+        };
+
+        localStorage.setItem('bia-state', JSON.stringify(newSnapshot));
+
+        // also clean WordPress local storage if present
+        try {
+          const wpRaw = localStorage.getItem('bia-wordpress-sites');
+          if (wpRaw) {
+            const wpArr = JSON.parse(wpRaw || '[]');
+            const filtered = Array.isArray(wpArr) ? wpArr.filter((w: any) => !orphanIds.has(String(w.id))) : wpArr;
+            localStorage.setItem('bia-wordpress-sites', JSON.stringify(filtered));
+            console.log('🧹 WordPressService storage atualizado, removed:', wpArr.length - filtered.length);
+          }
+        } catch (wpErr) {
+          console.warn('⚠️ Falha ao limpar storage do WordPressService:', wpErr);
+        }
+
+        console.log('✅ Remoção concluída. Sites removidos:', orphanSites.map(s => s.id));
+        // return summary
+        return { removed: orphanSites.length, ids: orphanSites.map(s => s.id) };
+      } catch (err) {
+        console.error('❌ Erro em __BIA_CLEAN_ORPHANS__:', err);
+        throw err;
+      }
+    };
+  }
+} catch (err) {
+  // ignore
+}

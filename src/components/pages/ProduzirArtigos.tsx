@@ -51,6 +51,8 @@ import { FREE_PLAN_LIMITS, getPlanLimits } from '../../utils/constants';
 import { toast } from 'sonner';
 import { contentService } from '../../services/contentService';
 import { wordpressService } from '../../services/wordpressService';
+import { filterBySiteId, compareIds } from '../../utils/idComparison';
+import { getSiteName as getSiteNameUtil } from '../../utils/siteUtils';
 
 // Função utilitária para gerar nome de imagem SEO-friendly baseado no título
 const generateImageName = (titulo: string): string => {
@@ -179,16 +181,98 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
   const [editedTitle, setEditedTitle] = useState('');
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
+  // ✅ NOVO: Estados para edição de artigos na visualização
+  const [isEditingArticle, setIsEditingArticle] = useState(false);
+  const [editedArticleTitle, setEditedArticleTitle] = useState('');
+  const [editedArticleContent, setEditedArticleContent] = useState('');
+  const [isSavingArticle, setIsSavingArticle] = useState(false);
+
   // Estados de paginação e filtros
   const [refreshKey, setRefreshKey] = useState(0); // Para forçar re-renderização
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'produced'>('all');
-  const [siteFilter, setSiteFilter] = useState<'all' | number>('all');
+  const [siteFilter, setSiteFilter] = useState<'all' | string | number>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const ITEMS_PER_PAGE = 15;
 
   // Cache WordPress
   const [wordpressSitesCache, setWordpressSitesCache] = useState<Map<string, boolean>>(new Map());
+
+  // Funções auxiliares para edição de texto
+  const getPlainTextFromHtml = useCallback((html: string) => {
+    // Remove tags HTML mas preserva quebras de linha e estrutura básica
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    
+    // Substituir tags de bloco por quebras de linha
+    const blockElements = ['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'br'];
+    blockElements.forEach(tag => {
+      const elements = tempDiv.querySelectorAll(tag);
+      elements.forEach(el => {
+        if (tag === 'br') {
+          el.replaceWith('\n');
+        } else {
+          el.insertAdjacentText('afterend', '\n\n');
+        }
+      });
+    });
+    
+    return tempDiv.textContent || tempDiv.innerText || '';
+  }, []);
+
+  const handleTextEdit = useCallback((plainText: string) => {
+    // Reconstroi HTML básico a partir do texto simples
+    const paragraphs = plainText.split('\n\n').filter(p => p.trim());
+    const htmlContent = paragraphs
+      .map(paragraph => {
+        const trimmed = paragraph.trim();
+        if (!trimmed) return '';
+        
+        // Detectar títulos (linhas que começam com maiúscula e são curtas)
+        if (trimmed.length < 80 && /^[A-ZÁÊÎÔÛ]/.test(trimmed) && !trimmed.endsWith('.')) {
+          return `<h2>${trimmed}</h2>`;
+        }
+        
+        return `<p>${trimmed}</p>`;
+      })
+      .filter(p => p)
+      .join('\n');
+    
+    setEditedArticleContent(htmlContent);
+  }, []);
+
+  const addWordPressStyles = useCallback((html: string) => {
+    // Adiciona estilos inline para simular aparência do WordPress
+    return html
+      .replace(/<h2>/g, '<h2 style="color: #1a1a1a; font-weight: 600; font-size: 1.5rem; margin-top: 2rem; margin-bottom: 1rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem;">')
+      .replace(/<h3>/g, '<h3 style="color: #1a1a1a; font-weight: 600; font-size: 1.25rem; margin-top: 1.5rem; margin-bottom: 0.75rem;">')
+      .replace(/<h4>/g, '<h4 style="color: #1a1a1a; font-weight: 600; font-size: 1.125rem; margin-top: 1.25rem; margin-bottom: 0.75rem;">')
+      .replace(/<p>/g, '<p style="margin-bottom: 1.5rem; text-align: justify; text-indent: 0;">')
+      .replace(/<ul>/g, '<ul style="margin: 1.5rem 0; padding-left: 2rem; list-style-type: disc;">')
+      .replace(/<ol>/g, '<ol style="margin: 1.5rem 0; padding-left: 2rem; list-style-type: decimal;">')
+      .replace(/<li>/g, '<li style="margin-bottom: 0.5rem;">')
+      .replace(/<strong>/g, '<strong style="font-weight: 600; color: #1a1a1a;">')
+      .replace(/<a /g, '<a style="color: #3b82f6; text-decoration: underline;" ')
+      .replace(/<blockquote>/g, '<blockquote style="border-left: 4px solid #3b82f6; padding-left: 1.5rem; margin: 2rem 0; font-style: italic; color: #64748b;">');
+  }, []);
+
+  // ✅ MONITORAR MUDANÇAS NAS IDEIAS PARA FORÇAR ATUALIZAÇÃO DA INTERFACE
+  useEffect(() => {
+    // Contar ideias excluídas para detectar mudanças
+    const excludedCount = state.ideas.filter(idea => idea.status === 'excluido').length;
+    
+    // Se houver mudanças significativas no número de ideias excluídas, forçar refresh
+    if (excludedCount > 0) {
+      console.log(`🔄 Detectadas ${excludedCount} ideias excluídas - forçando atualização da interface`);
+      
+      // Pequeno delay para permitir que o estado seja atualizado completamente
+      const timeoutId = setTimeout(() => {
+        setRefreshKey(prev => prev + 1);
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [state.ideas]);
 
   // Timer para controlar o botão de cancelar
   useEffect(() => {
@@ -461,10 +545,9 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
     };
   }, [realPlanLimits, basePlanLimits, currentUser?.quotas?.articles]);
 
-  // Obter nome do site por ID
-  const getSiteName = useCallback((siteId: number) => {
-    const site = state.sites.find(s => s.id === siteId);
-    return site?.nome || `Site ${siteId}`;
+  // Obter nome do site por ID - usando função utilitária global
+  const getSiteName = useCallback((siteId: number | string) => {
+    return getSiteNameUtil(state.sites, siteId);
   }, [state.sites]);
 
   // Obter lista de todos os sites do usuário com contagem de ideias baseada no filtro de status
@@ -513,8 +596,24 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
 
     // IMPORTANTE: Incluir TODOS os sites do usuário, não apenas os que têm ideias
     // Isso resolve o problema do bug onde sites sem ideias não apareciam na lista
+    console.log('🔍 DEBUG - Sites e Ideias para contagem:', {
+      totalSites: state.sites.length,
+      totalIdeas: availableIdeasForCount.length,
+      firstSite: state.sites[0] ? { id: state.sites[0].id, nome: state.sites[0].nome, idType: typeof state.sites[0].id } : null,
+      firstIdea: availableIdeasForCount[0] ? { siteId: availableIdeasForCount[0].siteId, siteIdType: typeof availableIdeasForCount[0].siteId, titulo: availableIdeasForCount[0].titulo } : null
+    });
+
     return state.sites.map(site => {
-      const ideaCount = availableIdeasForCount.filter(idea => idea.siteId === site.id).length;
+      const ideaCount = availableIdeasForCount.filter(idea => {
+        const matches = compareIds(idea.siteId, site.id);
+        if (!matches && availableIdeasForCount.length > 0) {
+          console.log('❌ ID mismatch:', { ideaSiteId: idea.siteId, siteId: site.id, ideaSiteIdType: typeof idea.siteId, siteIdType: typeof site.id });
+        }
+        return matches;
+      }).length;
+      
+      console.log(`📊 Site "${site.nome}" (ID: ${site.id}, tipo: ${typeof site.id}): ${ideaCount} ideias`);
+      
       return {
         id: site.id,
         name: site.nome,
@@ -587,9 +686,20 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
       );
     }
 
-    // Aplicar filtro de site
+    // Aplicar filtro de site usando utilitário global para escalabilidade
     if (siteFilter !== 'all') {
-      filteredIdeas = filteredIdeas.filter(idea => idea.siteId === siteFilter);
+      console.log('🔍 Debugging site filter:', {
+        siteFilter,
+        siteFilterType: typeof siteFilter,
+        firstIdeaSiteId: filteredIdeas[0]?.siteId,
+        firstIdeaSiteIdType: typeof filteredIdeas[0]?.siteId,
+        totalIdeasBeforeFilter: filteredIdeas.length
+      });
+      
+      // Usar utilitário global para compatibilidade com UUIDs em escala
+      filteredIdeas = filterBySiteId(filteredIdeas, siteFilter);
+      
+      console.log('✅ Ideas after site filter:', filteredIdeas.length);
     }
 
     // Aplicar filtro de status (já aplicado acima na lógica principal)
@@ -746,6 +856,38 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
     const words = textContent.split(/\s+/).filter(word => word.length > 0);
     return words.length;
   }, []);
+
+  // Função global para abrir modal de visualização (edição removida)
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).openEditModal = function(ideaId: string) {
+        const idea = state.ideas.find(i => i.id === ideaId);
+        const article = state.articles.find(a => a.ideaId === ideaId);
+        
+        if (!idea || !article) {
+          toast.error('Artigo não encontrado');
+          return;
+        }
+
+        const siteName = getSiteName(idea.siteId);
+        const wordCount = countWords(article.conteudo);
+
+        setCurrentViewingArticle({
+          idea,
+          article,
+          siteName,
+          wordCount
+        });
+
+        // Inicializar estados de edição com valores atuais
+        setEditedArticleTitle(article.titulo);
+        setEditedArticleContent(article.conteudo);
+        setIsEditingArticle(true); // Abrir diretamente no modo de edição
+        
+        setViewDialogOpen(true);
+      };
+    }
+  }, [state.ideas, state.articles, getSiteName, countWords]);
 
   // Função para testar a API OpenAI
   const handleTestApiKey = async () => {
@@ -943,6 +1085,229 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
     }
   }, [state.ideas, state.articles, getSiteName, countWords]);
 
+  // Função para abrir modal interno de visualização
+  const handleOpenViewModal = useCallback((idea: any) => {
+    const article = state.articles.find(a => a.ideaId === idea.id);
+    
+    if (!article) {
+      toast.error('Artigo não encontrado');
+      return;
+    }
+
+    const siteName = getSiteName(idea.siteId);
+    const wordCount = countWords(article.conteudo);
+
+    setCurrentViewingArticle({
+      idea,
+      article,
+      siteName,
+      wordCount
+    });
+
+    // Limpar estados de edição
+    setEditedArticleTitle(article.titulo);
+    setEditedArticleContent(article.conteudo);
+    setIsEditingArticle(false); // Abrir em modo de visualização
+    
+    setViewDialogOpen(true);
+  }, [state.articles, state.ideas, getSiteName, countWords]);
+
+  // ✅ NOVO: Função para abrir artigo em nova janela/aba
+  const handleOpenViewDialog = useCallback((idea: any) => {
+    const article = state.articles.find(a => a.ideaId === idea.id);
+    
+    if (!article) {
+      toast.error('Artigo não encontrado');
+      return;
+    }
+
+    const siteName = getSiteName(idea.siteId);
+    const wordCount = countWords(article.conteudo);
+
+    // Criar HTML completo para a nova janela
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${article.titulo} - ${siteName}</title>
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+            color: #333;
+            background: #fff;
+          }
+          .header {
+            border-bottom: 2px solid #e5e5e5;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+          }
+          .title {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 0 0 10px 0;
+            color: #1a1a1a;
+          }
+          .meta {
+            color: #666;
+            font-size: 0.9rem;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+          }
+          .content {
+            font-size: 1.1rem;
+            line-height: 1.8;
+          }
+          .content h1, .content h2, .content h3 {
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+          }
+          .content p {
+            margin-bottom: 1.5rem;
+          }
+          .edit-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+          }
+          .edit-button:hover {
+            background: #2563eb;
+          }
+          @media (max-width: 768px) {
+            body { padding: 15px; }
+            .title { font-size: 1.5rem; }
+            .meta { font-size: 0.8rem; }
+            .edit-button { 
+              position: static;
+              width: 100%;
+              margin-bottom: 20px;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <button class="edit-button" onclick="window.opener.editArticle('${idea.id}'); window.close();">
+          ✏️ Editar Artigo
+        </button>
+        
+        <div class="header">
+          <h1 class="title">${article.titulo}</h1>
+          <div class="meta">
+            <span><strong>Site:</strong> ${siteName}</span>
+            <span><strong>Palavras:</strong> ${wordCount}</span>
+            <span><strong>Nicho:</strong> ${idea.nicho}</span>
+          </div>
+        </div>
+        
+        <div class="content">
+          ${article.conteudo.replace(/\n/g, '<br>')}
+        </div>
+
+        <script>
+          // Função para comunicar com a janela pai
+          window.editArticle = function(ideaId) {
+            if (window.opener && !window.opener.closed) {
+              window.opener.openEditModal(ideaId);
+            }
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    // Criar blob URL e abrir em nova aba
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    
+    // Usar window.open sem especificar dimensões para forçar nova aba
+    const newTab = window.open(url, '_blank');
+    
+    if (newTab) {
+      newTab.focus();
+      // Limpar o blob URL após um tempo para economizar memória
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 1000);
+    } else {
+      // Fallback: tentar criar um link temporário e clicar nele
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+      }, 1000);
+    }
+  }, [state.articles, getSiteName, countWords]);
+
+  // ✅ NOVO: Função para salvar edições do artigo
+  const handleSaveArticleEdits = useCallback(async () => {
+    if (!currentViewingArticle) return;
+
+    setIsSavingArticle(true);
+
+    try {
+      // Atualizar artigo no contexto
+      const success = actions.updateArticle(currentViewingArticle.article.id, {
+        titulo: editedArticleTitle,
+        conteudo: editedArticleContent,
+        updatedAt: new Date().toISOString()
+      });
+
+      if (success) {
+        toast.success('Artigo atualizado com sucesso!');
+        
+        // Atualizar dados do modal
+        setCurrentViewingArticle(prev => ({
+          ...prev,
+          article: {
+            ...prev.article,
+            titulo: editedArticleTitle,
+            conteudo: editedArticleContent
+          },
+          wordCount: countWords(editedArticleContent)
+        }));
+
+        setIsEditingArticle(false);
+      } else {
+        toast.error('Erro ao atualizar artigo');
+      }
+    } catch (error) {
+      console.error('Erro ao salvar edições:', error);
+      toast.error('Erro ao salvar edições do artigo');
+    } finally {
+      setIsSavingArticle(false);
+    }
+  }, [currentViewingArticle, editedArticleTitle, editedArticleContent, actions, countWords]);
+
+  // ✅ NOVO: Função para cancelar edição de artigo
+  const handleCancelArticleEdit = useCallback(() => {
+    if (currentViewingArticle) {
+      setEditedArticleTitle(currentViewingArticle.article.titulo);
+      setEditedArticleContent(currentViewingArticle.article.conteudo);
+    }
+    setIsEditingArticle(false);
+  }, [currentViewingArticle]);
+
   // FUNÇÃO DE PRODUÇÃO INDIVIDUAL COM PROGRESSO VISUAL
   const handleProduceFromIdea = useCallback(async (ideaId: number, retryCount: number = 0) => {
     console.log(`🚀 Iniciando produção individual para ideia ${ideaId}${retryCount > 0 ? ` (tentativa ${retryCount + 1})` : ''}`);
@@ -970,6 +1335,19 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
     const idea = state.ideas.find(i => i.id === ideaId);
     if (!idea) {
       toast.error('Ideia não encontrada');
+      return;
+    }
+
+    // Verificar se já existe um artigo com este título para evitar duplicação
+    const existingArticle = state.articles.find(a => a.titulo === idea.titulo);
+    if (existingArticle) {
+      console.log(`⚠️ Já existe um artigo com o título "${idea.titulo}" - evitando duplicação`);
+      toast.warning('Já existe um artigo com este título', {
+        description: 'Verifique a lista de artigos produzidos'
+      });
+      setProcessingSingle(prev => ({ ...prev, [ideaId]: false }));
+      setSingleProgress(prev => ({ ...prev, [ideaId]: 0 }));
+      setGlobalProcessingLock(prev => ({ ...prev, [ideaId]: false }));
       return;
     }
 
@@ -1011,6 +1389,29 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
       // Progresso: Gerando conteúdo (50%)
       setSingleProgress(prev => ({ ...prev, [ideaId]: 50 }));
       
+      // ✅ CORREÇÃO: Validar parâmetros obrigatórios
+      const requestParams = {
+        titulo: idea.titulo,
+        nicho: idea.generationParams?.nicho || idea.categoria || 'Geral',
+        palavras_chave: idea.generationParams?.palavrasChave || idea.tags?.join(', ') || 'tecnologia, artigo',
+        idioma: 'Português',
+        conceito: idea.generationParams?.conceito || idea.generationParams?.contexto || '',
+        empresa: ''
+      };
+      
+      // ✅ CORREÇÃO: Validar se todos os campos obrigatórios estão preenchidos
+      if (!requestParams.titulo || requestParams.titulo.length < 10) {
+        throw new Error('Título deve ter pelo menos 10 caracteres');
+      }
+      if (!requestParams.nicho || requestParams.nicho.length < 3) {
+        throw new Error('Nicho deve ter pelo menos 3 caracteres');
+      }
+      if (!requestParams.palavras_chave || requestParams.palavras_chave.length < 3) {
+        throw new Error('Palavras-chave devem ter pelo menos 3 caracteres');
+      }
+      
+      console.log('📋 Parâmetros validados:', requestParams);
+      
       // Usar o endpoint generateArticle que usa o prompt_conteudo.php otimizado
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
       const token = localStorage.getItem('auth_token');
@@ -1020,14 +1421,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          titulo: idea.titulo,
-          nicho: idea.generationParams?.nicho || idea.categoria || 'Geral',
-          palavras_chave: idea.generationParams?.palavrasChave || idea.tags?.join(', ') || '',
-          idioma: 'Português',
-          conceito: idea.generationParams?.conceito || idea.generationParams?.contexto || '',
-          empresa: ''
-        })
+        body: JSON.stringify(requestParams)
       });
 
       if (!response.ok) {
@@ -1130,17 +1524,24 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
         imageUrlLength: articleData.imageUrl?.length || 0
       });
 
-      const success = await actions.addArticle(articleData);
+      const result = await actions.addArticle(articleData);
       
-      if (success) {
+      if (result.success) {
         console.log('✅ ARTIGO CRIADO COM SUCESSO - Status: Produzido');
         
-        // Atualizar status da ideia para indicar que foi produzida
-        console.log(`🔄 Atualizando status da ideia ${ideaId} para 'produzido'`);
-        actions.updateIdea(ideaId, { 
-          status: 'produzido'
-          // Removido articleId temporário que pode causar confusão
-        });
+        // Usar o UUID correto da ideia persistida, se disponível
+        const ideaIdToUpdate = result.persistedIdeaId || ideaId;
+        console.log(`🔄 Atualizando status da ideia ${ideaIdToUpdate} para 'produzido' (original: ${ideaId})`);
+        
+        // Só atualizar se tivermos um ID válido e que seja um UUID
+        const isUuid = (v: any) => typeof v === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(v);
+        if (isUuid(ideaIdToUpdate)) {
+          actions.updateIdea(ideaIdToUpdate, { 
+            status: 'produzido'
+          });
+        } else {
+          console.warn(`⚠️ Não foi possível atualizar status da ideia - ID inválido: ${ideaIdToUpdate}`);
+        }
         
         // ✅ O BACKEND JÁ CONSUMIU O CRÉDITO AUTOMATICAMENTE
         console.log('💳 Backend já consumiu 1 crédito automaticamente via ArtigoObserver');
@@ -1732,8 +2133,22 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
         console.log(`✅ Ideia ${ideaId} movida para "Excluídos" com sucesso`);
         toast.success('Ideia movida para "Excluídos" com sucesso');
         
-        // Forçar refresh da interface para atualizar a lista
+        // ✅ AGUARDAR sincronização assíncrona com backend
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        // ✅ Re-sincronizar dados para garantir consistência visual
+        try {
+          await actions.loadFromDatabase();
+          console.log('✅ Estado local atualizado após exclusão individual');
+        } catch (error) {
+          console.warn('⚠️ Erro na sincronização após exclusão individual:', error);
+        }
+        
+        // ✅ Forçar refresh da interface para atualizar a lista
         setRefreshKey(prev => prev + 1);
+        
+        // ✅ AGUARDAR que o re-render seja completado
+        await new Promise(resolve => setTimeout(resolve, 100));
       } else {
         console.error(`❌ Falha ao excluir ideia ${ideaId}`);
         toast.error('Erro ao excluir ideia');
@@ -1763,43 +2178,99 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
 
     setDeletingBatch(true);
 
+    // ✅ PRESERVAR IDs para processamento
+    const idsToDelete = [...selectedIdeaIds];
+    
     try {
       let successCount = 0;
       let errorCount = 0;
 
-      console.log(`🗑️ Iniciando exclusão em massa de ${selectedIdeaIds.length} ideias:`, selectedIdeaIds);
+      console.log(`🗑️ Iniciando exclusão em massa de ${idsToDelete.length} ideias:`, idsToDelete);
 
-      // ✅ CORREÇÃO: Usar actions.updateIdea individualmente para garantir sincronização com backend
+      // ✅ NOVA ABORDAGEM: Usar fetch diretamente para garantir sincronização
       const currentTime = new Date().toISOString();
       
-      // Processar cada ideia individualmente para garantir sincronização
-      for (const ideaId of selectedIdeaIds) {
+      // ✅ PROCESSAR TODAS AS IDEIAS COM CHAMADAS SÍNCRONAS AO BACKEND
+      for (const ideaId of idsToDelete) {
         const idea = state.ideas.find(i => i.id === ideaId);
         if (idea) {
-          console.log(`🗑️ Marcando ideia ${ideaId} como excluída:`, idea.titulo);
+          console.log(`🗑️ Processando exclusão da ideia ${ideaId}: ${idea.titulo}`);
           
-          const success = actions.updateIdea(ideaId, {
-            status: 'excluido' as const,
-            deletedDate: currentTime
-          });
-          
-          if (success) {
-            successCount++;
-          } else {
+          try {
+            // ✅ CHAMADA DIRETA AO BACKEND AGUARDANDO RESPOSTA
+            const response = await fetch(`${getApiUrl()}/ideias/${ideaId}`, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+              },
+              body: JSON.stringify({
+                status: 'excluido',
+                deleted_at: currentTime
+              })
+            });
+            
+            const result = await response.json();
+            
+            if (response.ok && result.success) {
+              // ✅ ATUALIZAR ESTADO LOCAL APÓS CONFIRMAÇÃO DO BACKEND
+              actions.updateIdea(ideaId, {
+                status: 'excluido' as const,
+                deletedDate: currentTime
+              });
+              
+              successCount++;
+              console.log(`✅ Ideia ${ideaId} excluída com sucesso no backend e estado local`);
+            } else {
+              errorCount++;
+              console.error(`❌ Falha no backend para ideia ${ideaId}:`, result);
+            }
+          } catch (apiError) {
             errorCount++;
+            console.error(`❌ Erro na API para ideia ${ideaId}:`, apiError);
           }
+        } else {
+          errorCount++;
+          console.error(`❌ Ideia ${ideaId} não encontrada no estado local`);
         }
       }
 
-      // Limpar seleção
+      // ✅ LIMPAR SELEÇÃO APÓS TODAS AS OPERAÇÕES
       setSelectedIdeaIds([]);
 
-      // Forçar refresh da interface para atualizar a lista
+      // ✅ FORÇAR RE-SINCRONIZAÇÃO COMPLETA
+      console.log('🔄 Forçando re-sincronização completa após exclusão em massa...');
+      await actions.loadFromDatabase();
+      
+      // ✅ AGUARDAR QUE OS DADOS SEJAM COMPLETAMENTE CARREGADOS
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // ✅ MÚLTIPLOS REFRESHES para garantir atualização visual
+      console.log('🔄 Aplicando refreshes múltiplos para garantir atualização da interface...');
       setRefreshKey(prev => prev + 1);
+      await new Promise(resolve => setTimeout(resolve, 100));
+      setRefreshKey(prev => prev + 1);
+      await new Promise(resolve => setTimeout(resolve, 100));
+      setRefreshKey(prev => prev + 1);
+      
+      // ✅ FILTRAR MANUALMENTE as ideias excluídas do estado atual (fallback)
+      const currentIdeasBeforeFilter = state.ideas.length;
+      const currentIdeasAfterFilter = state.ideas.filter(idea => idea.status !== 'excluido').length;
+      console.log(`📊 Ideias no estado: ${currentIdeasBeforeFilter} total, ${currentIdeasAfterFilter} não-excluídas`);
+      
+      // ✅ SE AINDA HOUVER IDEIAS EXCLUÍDAS VISÍVEIS, FORÇA LIMPEZA MANUAL
+      if (currentIdeasBeforeFilter > currentIdeasAfterFilter) {
+        console.log('🧹 Forçando limpeza manual de ideias excluídas do estado local...');
+        const cleanedIdeas = state.ideas.filter(idea => idea.status !== 'excluido');
+        actions.updateAllIdeas(cleanedIdeas);
+        setRefreshKey(prev => prev + 1);
+      }
 
       // Feedback para o usuário
       if (successCount > 0 && errorCount === 0) {
-        toast.success(`✅ ${successCount} ideia(s) movida(s) para "Excluídos" com sucesso!`);
+        toast.success(`✅ ${successCount} ideia(s) movida(s) para "Excluídos" com sucesso!`, {
+          description: 'Lista atualizada automaticamente'
+        });
         console.log(`📊 Exclusão em massa concluída: ${successCount} ideias excluídas`);
       } else if (successCount > 0 && errorCount > 0) {
         toast.warning(`Exclusão parcial: ${successCount} sucessos, ${errorCount} erros`);
@@ -2607,7 +3078,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
                 </Label>
                 <Select 
                   value={siteFilter === 'all' ? 'all' : siteFilter.toString()} 
-                  onValueChange={(value) => handleFilterChange('site', value === 'all' ? 'all' : parseInt(value))}
+                  onValueChange={(value) => handleFilterChange('site', value === 'all' ? 'all' : value)}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Todos os sites" />
@@ -2762,27 +3233,51 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
                 const progress = singleProgress[idea.id];
                 const batchItemProgress = batchProgress[idea.id];
                 const canProduce = apiDiagnostic.hasKey && apiDiagnostic.isValid && (!limits.articles || isDevOrAdmin);
+                
+
 
                 return (
                   <div key={idea.id} className="p-4 rounded-lg border bg-white hover:shadow-sm transition-all">
-                    <div className="flex flex-col gap-3">
-                      {/* Cabeçalho com checkbox, título e status */}
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          checked={selectedIdeaIds.includes(idea.id)}
-                          onCheckedChange={(checked) => handleSelectIdea(idea.id, checked as boolean)}
-                          disabled={isProcessing || hasArticle || processingBatch}
-                        />
-                        <h4 className="font-poppins font-medium text-foreground flex-1">
-                          {idea.titulo}
-                        </h4>
-                        {/* Badge de status ao lado do título */}
-                        {idea.status === 'produzido' && (
-                          <Badge className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
-                            Produzido
-                          </Badge>
-                        )}
-                      </div>
+                    <div className="flex gap-4">
+                      {/* Imagem do artigo (se disponível) */}
+                      {hasArticle && article?.imageUrl ? (
+                        <div className="flex-shrink-0">
+                          <img 
+                            src={article.imageUrl} 
+                            alt={`Imagem do artigo: ${idea.titulo}`}
+                            className="w-24 h-24 object-cover rounded-lg border"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                            }}
+                          />
+                        </div>
+                      ) : hasArticle && article && !article.imageUrl ? (
+                        <div className="flex-shrink-0">
+                          <div className="w-24 h-24 bg-gray-100 rounded-lg border flex items-center justify-center">
+                            <span className="text-gray-400 text-xs text-center">Sem<br/>imagem</span>
+                          </div>
+                        </div>
+                      ) : null}
+                      
+                      <div className="flex-1 flex flex-col gap-3">
+                        {/* Cabeçalho com checkbox, título e status */}
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={selectedIdeaIds.includes(idea.id)}
+                            onCheckedChange={(checked) => handleSelectIdea(idea.id, checked as boolean)}
+                            disabled={isProcessing || hasArticle || processingBatch}
+                          />
+                          <h4 className="font-poppins font-medium text-foreground flex-1">
+                            {idea.titulo}
+                          </h4>
+                          {/* Badge de status ao lado do título */}
+                          {idea.status === 'produzido' && (
+                            <Badge className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
+                              Produzido
+                            </Badge>
+                          )}
+                        </div>
                       
                       {/* Badges de site, categoria e tags */}
                       <div className="flex flex-wrap gap-2">
@@ -2808,20 +3303,22 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
 
                       {/* Botões de ação */}
                       <div className="flex flex-wrap gap-2 justify-end">
-                        {/* Botão para editar ideia - sempre visível */}
-                        <Button
-                          onClick={() => handleOpenEditDialog(idea.id)}
-                          disabled={isProcessing || processingBatch || deletingSingle[idea.id]}
-                          className="bg-white border-[#8c52ff] text-[#8c52ff] hover:bg-purple-50 px-2 py-1 text-sm"
-                          title="Editar título da ideia"
-                        >
-                          <Edit3 className="h-4 w-4" />
-                        </Button>
+                        {/* Botão para editar ideia - apenas visível se não tiver artigo produzido */}
+                        {!hasArticle && (
+                          <Button
+                            onClick={() => handleOpenEditDialog(idea.id)}
+                            disabled={isProcessing || processingBatch || deletingSingle[idea.id]}
+                            className="bg-white border-[#8c52ff] text-[#8c52ff] hover:bg-purple-50 px-2 py-1 text-sm"
+                            title="Editar título da ideia"
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </Button>
+                        )}
 
                         {hasArticle && article ? (
                           <>
                             <Button
-                              onClick={() => handleViewArticle(idea.id)}
+                              onClick={() => handleOpenViewModal(idea)}
                               className="bg-green-600 hover:bg-green-700 text-white border-green-600 px-2 py-1 text-sm"
                             >
                               <Eye className="h-4 w-4 mr-1" />
@@ -2891,28 +3388,29 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
                             <Trash2 className="h-4 w-4" />
                           )}
                         </Button>
-                      </div>
-                      
-                      {/* Barra de loading estreita na parte inferior */}
-                      {(isProcessing || (processingBatch && batchItemProgress !== undefined)) && (
-                        <div className="mt-2">
-                          <div className="flex justify-between text-xs text-purple-600 mb-1">
-                            <span>
-                              {publishingBatch ? 'Publicando no WordPress...' : processingBatch ? 'Produção em massa...' : 'Produzindo artigo...'}
-                            </span>
-                            <span>{(batchItemProgress || progress) === -1 ? 'Erro' : `${batchItemProgress || progress}%`}</span>
-                          </div>
-                          <div className="w-full h-2 bg-purple-100 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full transition-all duration-300 ease-out rounded-full"
-                              style={{ 
-                                width: `${(batchItemProgress || progress) === -1 ? 100 : (batchItemProgress || progress)}%`,
-                                backgroundColor: (batchItemProgress || progress) === -1 ? '#ef4444' : '#8c52ff'
-                              }}
-                            />
-                          </div>
                         </div>
-                      )}
+                        
+                        {/* Barra de loading estreita na parte inferior */}
+                        {(isProcessing || (processingBatch && batchItemProgress !== undefined)) && (
+                          <div className="mt-2">
+                            <div className="flex justify-between text-xs text-purple-600 mb-1">
+                              <span>
+                                {publishingBatch ? 'Publicando no WordPress...' : processingBatch ? 'Produção em massa...' : 'Produzindo artigo...'}
+                              </span>
+                              <span>{(batchItemProgress || progress) === -1 ? 'Erro' : `${batchItemProgress || progress}%`}</span>
+                            </div>
+                            <div className="w-full h-2 bg-purple-100 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full transition-all duration-300 ease-out rounded-full"
+                                style={{ 
+                                  width: `${(batchItemProgress || progress) === -1 ? 100 : (batchItemProgress || progress)}%`,
+                                  backgroundColor: (batchItemProgress || progress) === -1 ? '#ef4444' : '#8c52ff'
+                                }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -2951,21 +3449,65 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
         </CardContent>
       </Card>
 
-      {/* Modal para visualizar artigo */}
+      {/* Modal para visualizar/editar artigo */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="font-poppins flex items-center">
-              <Eye className="mr-2 h-5 w-5 text-blue-600" />
-              Visualizar Artigo
+        <DialogContent className="max-w-full max-h-full w-screen h-screen overflow-y-auto p-0">
+          <DialogHeader className="px-6 pt-6 pb-4">
+            <DialogTitle className="font-poppins flex items-center justify-between">
+              <div className="flex items-center">
+                <Eye className="mr-2 h-5 w-5" style={{ color: '#8c52ff' }} />
+                {isEditingArticle ? 'Editar Artigo' : 'Visualizar Artigo'}
+              </div>
+              <div className="flex gap-2">
+                {!isEditingArticle ? (
+                  <Button
+                    onClick={() => setIsEditingArticle(true)}
+                    className="text-white px-3 py-1 text-sm"
+                    style={{ backgroundColor: '#8c52ff' }}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#7c3aed'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#8c52ff'}
+                  >
+                    <Edit3 className="h-4 w-4 mr-1" />
+                    Editar
+                  </Button>
+                ) : (
+                  <>
+                    <Button
+                      onClick={handleSaveArticleEdits}
+                      disabled={isSavingArticle}
+                      className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 text-sm"
+                    >
+                      {isSavingArticle ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                      ) : (
+                        <Save className="h-4 w-4 mr-1" />
+                      )}
+                      Salvar
+                    </Button>
+                    <Button
+                      onClick={handleCancelArticleEdit}
+                      variant="outline"
+                      className="px-3 py-1 text-sm"
+                    >
+                      <XCircle className="h-4 w-4 mr-1" />
+                      Cancelar
+                    </Button>
+                  </>
+                )}
+              </div>
             </DialogTitle>
             <DialogDescription className="font-montserrat">
-              Visualize o conteúdo completo do artigo gerado, incluindo imagem, informações e formatação.
+              {isEditingArticle 
+                ? 'Edite o título e conteúdo do artigo conforme necessário antes de publicar.'
+                : 'Visualize o conteúdo completo do artigo gerado, incluindo imagem, informações e formatação.'
+              }
             </DialogDescription>
           </DialogHeader>
           
           {currentViewingArticle && (
-            <div className="space-y-6">
+            <div className="w-full max-w-none px-6 pb-6">
+              <div className="mx-auto" style={{ width: '60%', minWidth: '600px', maxWidth: '1200px' }}>
+                <div className="space-y-6">
               {/* Informações do artigo */}
               <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
                 <div>
@@ -2978,7 +3520,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
                 </div>
                 <div>
                   <Label className="font-montserrat text-sm text-gray-600">Palavras</Label>
-                  <p className="font-montserrat">{currentViewingArticle.wordCount}</p>
+                  <p className="font-montserrat">{isEditingArticle ? countWords(editedArticleContent) : currentViewingArticle.wordCount}</p>
                 </div>
                 <div>
                   <Label className="font-montserrat text-sm text-gray-600">Status</Label>
@@ -2989,7 +3531,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
               </div>
 
               {/* Tags */}
-                    {currentViewingArticle.idea.tags && currentViewingArticle.idea.tags.length > 0 && (
+              {currentViewingArticle.idea.tags && currentViewingArticle.idea.tags.length > 0 && (
                 <div>
                   <Label className="font-montserrat text-sm text-gray-600 mb-2 block">Tags</Label>
                   <div className="flex flex-wrap gap-2">
@@ -3003,26 +3545,87 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
               )}
 
               {/* Imagem em destaque */}
-              {currentViewingArticle.article.imageUrl && (
+              {currentViewingArticle.article.imageUrl ? (
                 <div>
                   <Label className="font-montserrat text-sm text-gray-600 mb-2 block">Imagem em Destaque</Label>
                   <div className="border rounded-lg overflow-hidden">
                     <img 
                       src={currentViewingArticle.article.imageUrl} 
-                      alt={currentViewingArticle.article.titulo}
-                      className="w-full h-64 object-cover"
+                      alt={isEditingArticle ? editedArticleTitle : currentViewingArticle.article.titulo}
+                      className="w-full object-cover"
+                      style={{ height: '400px' }}
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                      }}
                     />
                   </div>
                 </div>
+              ) : (
+                <div>
+                  <Label className="font-montserrat text-sm text-gray-600 mb-2 block">Imagem em Destaque</Label>
+                  <div className="border rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center" style={{ height: '400px' }}>
+                    <span className="text-gray-400 text-center">Nenhuma imagem disponível para este artigo</span>
+                  </div>
+                </div>
               )}
+              
+
+
+              {/* Título do artigo */}
+              <div>
+                <Label className="font-montserrat text-sm text-gray-600 mb-2 block">Título</Label>
+                {isEditingArticle ? (
+                  <Input
+                    value={editedArticleTitle}
+                    onChange={(e) => setEditedArticleTitle(e.target.value)}
+                    className="font-montserrat text-lg font-semibold"
+                    placeholder="Digite o título do artigo..."
+                  />
+                ) : (
+                  <h2 className="text-2xl font-bold text-gray-900 font-poppins">
+                    {currentViewingArticle.article.titulo}
+                  </h2>
+                )}
+              </div>
 
               {/* Conteúdo do artigo */}
               <div>
                 <Label className="font-montserrat text-sm text-gray-600 mb-2 block">Conteúdo</Label>
-                <div 
-                  className="prose max-w-none p-4 border rounded-lg bg-white"
-                  dangerouslySetInnerHTML={{ __html: currentViewingArticle.article.conteudo }}
-                />
+                {isEditingArticle ? (
+                  <div className="bg-white border rounded-lg overflow-hidden">
+                    <div className="p-4 bg-gray-50 border-b">
+                      <p className="text-sm text-gray-600 font-montserrat">
+                        📝 Editando apenas o texto. A formatação HTML será preservada automaticamente.
+                      </p>
+                    </div>
+                    <Textarea
+                      value={getPlainTextFromHtml(editedArticleContent)}
+                      onChange={(e) => handleTextEdit(e.target.value)}
+                      className="min-h-96 font-gray-700 border-0 resize-none focus:ring-0 text-base leading-relaxed"
+                      style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
+                      placeholder="Digite o conteúdo do artigo..."
+                    />
+                  </div>
+                ) : (
+                  <div className="bg-white border rounded-lg overflow-hidden shadow-sm">
+                    <div 
+                      className="max-w-none p-8 text-justify"
+                      style={{ 
+                        fontSize: '18px', 
+                        lineHeight: '1.8',
+                        fontFamily: 'Georgia, "Times New Roman", serif',
+                        color: '#333333'
+                      }}
+                    >
+                      <div 
+                        dangerouslySetInnerHTML={{ __html: addWordPressStyles(currentViewingArticle.article.conteudo) }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+                </div>
               </div>
             </div>
           )}

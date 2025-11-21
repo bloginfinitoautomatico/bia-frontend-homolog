@@ -195,10 +195,10 @@ export function Dashboard({ userData, onNavigate, onUpdateUser, onRefreshUser }:
   });
 
   // 🔍 Debug dos limites aplicados
-  // Calcular alertas baseados em créditos disponíveis  
+  // Calcular alertas baseados em créditos disponíveis - EXCLUIR usuários ilimitados/developer
   const creditsAlerts = {
-    articles_at_limit: availableCredits.articles <= 0 && planLimits.articles > 0,
-    articles_near_limit: availableCredits.articles > 0 && availableCredits.articles <= Math.max(1, Math.floor(planLimits.articles * 0.1)) && planLimits.articles > 0
+    articles_at_limit: !isDev && !planLimits.isUnlimited && currentPlan !== 'Developer' && availableCredits.articles <= 0 && planLimits.articles > 0,
+    articles_near_limit: !isDev && !planLimits.isUnlimited && currentPlan !== 'Developer' && availableCredits.articles > 0 && availableCredits.articles <= Math.max(1, Math.floor(planLimits.articles * 0.1)) && planLimits.articles > 0
   };
 
   console.log('📊 Limites do plano atual:', {

@@ -39,7 +39,10 @@ export function Excluidos({ userData }: ExcluidosProps) {
     // Filtro por site
     if (filterSite !== 'all') {
       const siteId = parseInt(filterSite);
-      filtered = filtered.filter(idea => idea.siteId === siteId);
+      filtered = filtered.filter(idea => 
+        idea.siteId === siteId || 
+        idea.siteId.toString() === siteId.toString()
+      );
     }
     
     // Ordenação sempre por data (mais recente primeiro)

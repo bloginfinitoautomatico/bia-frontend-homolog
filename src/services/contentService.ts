@@ -17,7 +17,7 @@ interface IdeaGenerationParams {
   idioma: string;
   contexto?: string;
   empresa?: string;
-  siteId: number;
+  siteId: string; // Alterado para string UUID
   autor?: string;
   categorias?: string[];
   tags?: string[];
@@ -31,8 +31,8 @@ interface ContentGenerationParams {
   idioma: string;
   contexto?: string;
   empresa?: string;
-  siteId: number;
-  ideaId: number;
+  siteId: string; // Alterado para string UUID
+  ideaId: string; // Alterado para string UUID
   cta?: CTAData;
 }
 
@@ -63,7 +63,9 @@ export class ContentService {
         palavras_chave: params.palavrasChave, // OpenAI controller espera palavras_chave
         quantidade: params.quantidade,
         idioma: params.idioma,
-        contexto: params.contexto || '' // OpenAI controller espera contexto
+        contexto: params.contexto || '', // OpenAI controller espera contexto
+        persist: true, // SEMPRE persistir ideias geradas
+        site_id: params.siteId // Incluir site_id se fornecido
       };
       
       console.log('📤 Parâmetros enviados para backend OpenAI:', backendParams);

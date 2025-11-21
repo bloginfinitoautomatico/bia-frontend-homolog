@@ -8,6 +8,7 @@ import { useBia } from '../BiaContext';
 import { useDashboard } from '../../hooks/useDashboard';
 import { useCredits } from '../../hooks/useCredits';
 import { getPlanLimits } from '../../utils/constants';
+import { getSiteName } from '../../utils/siteUtils';
 
 interface HistoricoProps {
   userData: any;
@@ -181,7 +182,7 @@ export function Historico({ userData }: HistoricoProps) {
     
     // Preparar dados antes de usar na string HTML
     const siteName = article.siteId 
-      ? state.sites.find(s => s.id === article.siteId)?.nome || 'Site não encontrado'
+      ? getSiteName(state.sites, article.siteId)
       : '';
     
     const htmlContent = `
@@ -458,7 +459,7 @@ export function Historico({ userData }: HistoricoProps) {
                           <Monitor size={14} style={{ color: '#8c52ff' }} />
                           <span className="font-montserrat text-muted-foreground">
                             Site: {article.siteId 
-                              ? state.sites.find(s => s.id === article.siteId)?.nome || 'Site não encontrado'
+                              ? getSiteName(state.sites, article.siteId)
                               : 'Não vinculado'}
                           </span>
                         </div>

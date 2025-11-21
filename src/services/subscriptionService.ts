@@ -26,14 +26,14 @@ export interface CreditCardData {
 }
 
 interface CreateSubscriptionRequest {
-  plan_id: string | number;
+  plan_id: string;
   billing_type: 'BOLETO' | 'CREDIT_CARD' | 'PIX';
   customer_data: CustomerData;
   credit_card?: CreditCardData;
 }
 
 interface CreatePaymentRequest {
-  plan_id: string | number;
+  plan_id: string;
   billing_type: 'BOLETO' | 'CREDIT_CARD' | 'PIX';
   customer_data: CustomerData;
   credit_card?: CreditCardData;

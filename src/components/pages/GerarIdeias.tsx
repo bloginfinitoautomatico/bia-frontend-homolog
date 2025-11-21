@@ -16,6 +16,7 @@ import { FREE_PLAN_LIMITS, getPlanLimits, isFreePlan } from '../../utils/constan
 import { toast } from 'sonner';
 import { wordpressService, WordPressCategory, WordPressAuthor, WordPressTag } from '../../services/wordpressService';
 import { contentService } from '../../services/contentService';
+import { getSiteName } from '../../utils/siteUtils';
 
 interface GerarIdeiasProps {
   userData: any;
@@ -110,6 +111,18 @@ export function GerarIdeias({ userData, onPageChange, onUpdateUser }: GerarIdeia
     state.sites.filter(site => site.status === 'ativo'), 
     [state.sites]
   );
+
+  // Auto-selecionar primeiro site se nenhum estiver selecionado
+  React.useEffect(() => {
+    if (!formData.siteId && activeSites.length > 0) {
+      const firstSite = activeSites[0];
+      console.log('🎯 Auto-selecionando primeiro site ativo:', firstSite.nome, 'ID:', firstSite.id);
+      setFormData(prev => ({
+        ...prev,
+        siteId: firstSite.id.toString()
+      }));
+    }
+  }, [activeSites, formData.siteId]);
 
   // Filtrar ideias pendentes para exibir na seção "Produzir a partir de Ideias"
   const pendingIdeas = React.useMemo(() => 
@@ -725,7 +738,7 @@ export function GerarIdeias({ userData, onPageChange, onUpdateUser }: GerarIdeia
         idioma: formData.idioma,
         contexto: formData.contexto,
         empresa: selectedSite?.nome || '',
-        siteId: parseInt(formData.siteId),
+        siteId: formData.siteId, // Manter como string UUID
         autor: formData.autor,
         categorias: formData.categorias,
         tags: formData.tags
@@ -778,10 +791,18 @@ export function GerarIdeias({ userData, onPageChange, onUpdateUser }: GerarIdeia
       }
 
       // Criar objetos de ideia para adicionar ao contexto
+      console.log('🔍 DEBUG - Dados para criação de ideias:', {
+        selectedSiteId: selectedSite?.id,
+        selectedSiteIdType: typeof selectedSite?.id,
+        formDataSiteId: formData.siteId,
+        formDataSiteIdType: typeof formData.siteId,
+        selectedSiteName: selectedSite?.nome
+      });
+
       const newIdeas = ideiasList.map((titulo: string, index: number) => {
         const tituloLimpo = (titulo as string).replace(/^\d+\.\s*/, '').replace(/['"]/g, '').trim();
         
-        return {
+        const ideaData = {
           titulo: tituloLimpo,
           descricao: `Ideia gerada para o nicho de ${formData.nicho}, focando nas palavras-chave: ${formData.palavrasChave}. Site: ${selectedSite?.nome}. ${selectedAuthor ? `Autor: ${selectedAuthor.name}. ` : ''}${selectedCategories.length > 0 ? `Categorias: ${selectedCategories.map(c => c?.name).join(', ')}. ` : ''}${formData.contexto ? `Contexto adicional: ${formData.contexto}` : ''}`,
           categoria: selectedCategories.length > 0 ? selectedCategories[0]?.name || formData.nicho : formData.nicho,
@@ -792,7 +813,7 @@ export function GerarIdeias({ userData, onPageChange, onUpdateUser }: GerarIdeia
               return tag ? tag.name : tagSlug;
             })
           ],
-          siteId: parseInt(formData.siteId),
+          siteId: formData.siteId,
           status: 'ativa' as const,
           wordpressData: {
             autor: selectedAuthor?.id || null,
@@ -814,11 +835,23 @@ export function GerarIdeias({ userData, onPageChange, onUpdateUser }: GerarIdeia
             contexto: formData.contexto
           }
         };
+
+        console.log('💡 Ideia criada:', { titulo: ideaData.titulo, siteId: ideaData.siteId, siteIdType: typeof ideaData.siteId });
+        return ideaData;
       });
 
       const success = await actions.addIdeas(newIdeas);
       
       if (success) {
+        // ✅ CORREÇÃO: Forçar atualização do estado após adicionar ideias
+        console.log('🔄 Forçando atualização do estado após geração de ideias...');
+        try {
+          await actions.loadFromDatabase();
+          console.log('✅ Estado atualizado após geração de ideias');
+        } catch (error) {
+          console.error('⚠️ Erro ao atualizar estado após geração:', error);
+        }
+        
         // Salvar dados da geração bem-sucedida ANTES do reset
         saveLastGenerationData(formData);
         
@@ -1543,7 +1576,7 @@ export function GerarIdeias({ userData, onPageChange, onUpdateUser }: GerarIdeia
                     </div>
                     <div className="flex items-center ml-4">
                       <Badge className="text-xs text-white border-none px-2 py-1 rounded" style={{ backgroundColor: '#8c52ff' }}>
-                        {state.sites.find(s => s.id === idea.siteId)?.nome || 'Site não encontrado'}
+                        {getSiteName(state.sites, idea.siteId)}
                       </Badge>
                     </div>
                   </div>
