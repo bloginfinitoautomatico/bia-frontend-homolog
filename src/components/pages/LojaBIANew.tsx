@@ -367,17 +367,19 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
 
     // Buscar plano dinamicamente da API
     const findPlanBySlug = (slug: string) => {
-      if (!plansData || !plansData.plans) {
+      if (!plansData || Object.keys(plansData).length === 0) {
         console.error('Planos não carregados da API ainda');
         return null;
       }
 
       // Buscar em todos os tipos de planos
-      for (const planType of Object.keys(plansData.plans)) {
-        const plansOfType = plansData.plans[planType];
-        const foundPlan = plansOfType.find((p: any) => p.slug === slug);
-        if (foundPlan) {
-          return foundPlan;
+      for (const planType of Object.keys(plansData)) {
+        const plansOfType = plansData[planType as keyof typeof plansData];
+        if (Array.isArray(plansOfType)) {
+          const foundPlan = plansOfType.find((p: any) => p.slug === slug);
+          if (foundPlan) {
+            return foundPlan;
+          }
         }
       }
 
@@ -385,7 +387,7 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
       return null;
     };
 
-    // Buscar plano da API dinamicamente
+    // Buscar plano da API dinamicamente usando o ID (que agora é o slug)
     const apiPlan = findPlanBySlug(plan.id);
     
     if (!apiPlan) {
@@ -693,9 +695,10 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
                   ) : plansData.monthly && plansData.monthly.length > 0 ? (
                     plansData.monthly.map((plan) => renderPlanCard({
                       ...plan,
+                      id: plan.slug, // Usar slug como ID para consistência
+                      price: parseFloat(plan.price),
                       icon: getIconForPlan(plan.slug),
-                      popular: plan.features?.includes('Mais Popular'),
-                      pricePrefix: 'R$',
+                      popular: plan.slug === 'intermediario', // Marcar Intermediário como popular
                       period: 'mês'
                     }))
                   ) : (
@@ -745,8 +748,19 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
                         <p className="font-montserrat text-sm text-muted-foreground">Carregando packs...</p>
                       </div>
                     </div>
+                  ) : plansData.article_pack && plansData.article_pack.length > 0 ? (
+                    plansData.article_pack.map((pack) => renderPlanCard({
+                      ...pack,
+                      id: pack.slug, // Usar slug como ID para consistência
+                      price: parseFloat(pack.price),
+                      articles: pack.articles_included,
+                      validity: getValidityForPack(pack.slug),
+                      color: getColorForPack(pack.slug),
+                      icon: FileText,
+                      popular: pack.slug === 'pack-100' // Marcar pack 100 como popular
+                    }, true))
                   ) : (
-                    articlePacks.slice(0, 6).map((pack) => renderPlanCard(pack))
+                    articlePacks.slice(0, 6).map((pack) => renderPlanCard(pack, true))
                   )}
                 </div>
 
@@ -792,50 +806,15 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
                       </div>
                     </div>
                   ) : plansData.additional && plansData.additional.length > 0 ? (
-                    [
-                      // Modelo de Blog Pronto
-                      renderPlanCard({
-                        id: 'modelo-blog',
-                        name: 'Modelo de Blog Pronto',
-                        price: 197,
-                        originalPrice: 497,
-                        description: 'Site WordPress completo otimizado para SEO com tema profissional',
-                        icon: Globe,
-                        color: 'white',
-                        popular: false,
-                        pricePrefix: 'R$',
-                        isAdditional: true,
-                        features: [
-                          'Instalação 100% automática com 1 clique',
-                          'Design moderno, responsivo e otimizado',
-                          'Estrutura pensada para conversão e SEO',
-                          'Páginas modelo (home, blog, sobre, contato)',
-                          'Plugins essenciais pré-configurados',
-                          'Compatível com Elementor e WooCommerce'
-                        ]
-                      }, false, true),
-                      // Landing Blog Personalizada
-                      renderPlanCard({
-                        id: 'landing-blog-personalizada',
-                        name: 'Landing Blog Personalizada',
-                        price: 997,
-                        originalPrice: null,
-                        description: 'Landing page personalizada profissionalmente para seu negócio',
-                        icon: Target,
-                        color: 'purple',
-                        popular: true,
-                        pricePrefix: 'R$',
-                        isAdditional: true,
-                        features: [
-                          'Landing page personalizada para seu negócio',
-                          'Design responsivo e otimizado para conversão',
-                          'Integração com formulários de contato',
-                          'Configuração de Google Analytics e pixels',
-                          'Otimização SEO on-page completa',
-                          'Treinamento para uso da plataforma'
-                        ]
-                      }, false, true)
-                    ]
+                    plansData.additional.map((product) => renderPlanCard({
+                      ...product,
+                      id: product.slug, // Usar slug como ID para consistência
+                      price: parseFloat(product.price),
+                      originalPrice: product.slug === 'modelo-blog' ? 497 : null,
+                      icon: product.slug === 'modelo-blog' ? Globe : Target,
+                      color: product.slug === 'modelo-blog' ? 'white' : 'purple',
+                      popular: product.slug === 'landing-blog-personalizada'
+                    }, false, true))
                   ) : (
                     additionalProducts.map((product) => renderPlanCard(product, false, true))
                   )}

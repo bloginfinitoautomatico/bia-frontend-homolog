@@ -282,6 +282,20 @@ export function FinancialDashboard({ userData }: { userData?: any }) {
         </div>
       </div>
 
+      {/* Alerta sobre fontes de dados */}
+      <Alert className="border-green-200 bg-green-50">
+        <AlertCircle className="h-4 w-4 text-green-600" />
+        <AlertDescription className="text-green-800">
+          <strong>Dados Exclusivos BIA:</strong> Este painel mostra apenas cobranças e pagamentos gerados pelo sistema BIA. 
+          <br />
+          <strong>• Receita Total:</strong> Pagamentos confirmados da BIA
+          <br />
+          <strong>• Receita Prevista:</strong> Cobranças pendentes + assinaturas ativas da BIA
+          <br />
+          Dados podem estar zerados em ambiente de desenvolvimento sem transações reais.
+        </AlertDescription>
+      </Alert>
+
       {/* Métricas Principais */}
       <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
         <Card>
@@ -294,6 +308,9 @@ export function FinancialDashboard({ userData }: { userData?: any }) {
             <p className="text-xs text-gray-600">
               Taxa de conversão: {data.metrics.conversion_rate.toFixed(1)}%
             </p>
+            <div className="mt-1">
+              <Badge variant="outline" className="text-xs">Base Local</Badge>
+            </div>
           </CardContent>
         </Card>
 
@@ -307,6 +324,9 @@ export function FinancialDashboard({ userData }: { userData?: any }) {
             <p className="text-xs text-gray-600">
               Receita recorrente mensal
             </p>
+            <div className="mt-1">
+              <Badge variant="outline" className="text-xs">Base Local</Badge>
+            </div>
           </CardContent>
         </Card>
 
@@ -320,6 +340,9 @@ export function FinancialDashboard({ userData }: { userData?: any }) {
             <p className="text-xs text-gray-600">
               Últimos 30 dias
             </p>
+            <div className="mt-1">
+              <Badge variant="outline" className="text-xs">Base Local</Badge>
+            </div>
           </CardContent>
         </Card>
 
@@ -336,6 +359,9 @@ export function FinancialDashboard({ userData }: { userData?: any }) {
             <p className="text-xs text-gray-600">
               Este mês
             </p>
+            <div className="mt-1">
+              <Badge variant="outline" className="text-xs">Base Local</Badge>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -351,6 +377,9 @@ export function FinancialDashboard({ userData }: { userData?: any }) {
             <div className="text-3xl font-bold text-green-600">
               {formatCurrency(data.financial_metrics?.total_revenue || 0)}
             </div>
+            <div className="mt-2">
+              <Badge className="text-xs bg-green-100 text-green-800 border-green-300">Pagamentos BIA Confirmados</Badge>
+            </div>
           </CardContent>
         </Card>
 
@@ -363,6 +392,9 @@ export function FinancialDashboard({ userData }: { userData?: any }) {
             <div className="text-3xl font-bold text-blue-600">
               {formatCurrency(data.financial_metrics?.predicted_revenue || 0)}
             </div>
+            <div className="mt-2">
+              <Badge className="text-xs bg-blue-100 text-blue-800 border-blue-300">Cobranças BIA Pendentes</Badge>
+            </div>
           </CardContent>
         </Card>
 
@@ -370,6 +402,9 @@ export function FinancialDashboard({ userData }: { userData?: any }) {
           <CardHeader>
             <CardTitle className="text-lg">Métodos de Pagamento</CardTitle>
             <p className="text-sm text-gray-600">Distribuição por método</p>
+            <div className="mt-2">
+              <Badge className="text-xs bg-green-100 text-green-800 border-green-300">Métodos BIA</Badge>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
