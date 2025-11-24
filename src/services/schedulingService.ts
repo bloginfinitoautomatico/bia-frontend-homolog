@@ -1,11 +1,9 @@
-// Função para construir URLs da API
-function buildApiUrl(endpoint: string): string {
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  // Garantir compatibilidade com o padrão usado pelo app: backend base + /api
-  const raw = (((import.meta as any).env && (import.meta as any).env.VITE_BACKEND_URL) || 'http://127.0.0.1:8000').replace(/\/$/, '');
-  const apiBase = raw.endsWith('/api') ? raw : `${raw}/api`;
-  return `${apiBase}${cleanEndpoint}`;
-}
+import { buildApiUrl } from '../config/api';
+import api from './api.js';
+
+// Função para construir URLs da API - usar implementação oficial
+// (renomeando para evitar conflito de nome)
+const getApiUrl = buildApiUrl;
 
 // Função para obter headers autenticados
 function getAuthHeaders(): Record<string, string> {

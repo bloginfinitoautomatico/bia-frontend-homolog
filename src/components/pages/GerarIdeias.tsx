@@ -300,7 +300,7 @@ export function GerarIdeias({ userData, onPageChange, onUpdateUser }: GerarIdeia
           details: testResult.details
         }));
       } else {
-        toast.error(`Sistema temporariamente indisponível: ${testResult.message}`);
+        toast.error('Não foi possível gerar ideias no momento. Tente novamente em alguns minutos.');
         setApiDiagnostic(prev => ({
           ...prev,
           hasKey: false,
@@ -712,7 +712,7 @@ export function GerarIdeias({ userData, onPageChange, onUpdateUser }: GerarIdeia
 
     // Verificar se a API está funcionando
     if (!apiDiagnostic.hasKey || !apiDiagnostic.isValid) {
-      toast.error('Sistema de IA não disponível. Verifique a configuração da chave OpenAI.');
+      toast.error('Não foi possível gerar ideias no momento. Tente novamente em alguns minutos.');
       return;
     }
 
@@ -1014,19 +1014,11 @@ export function GerarIdeias({ userData, onPageChange, onUpdateUser }: GerarIdeia
           <AlertDescription className="font-montserrat">
             <div className="flex items-center justify-between">
               <div>
-                <strong>Sistema de IA indisponível:</strong> {
-                  apiDiagnostic.error === 'Chave OpenAI não configurada no servidor'
-                    ? 'Chave OpenAI não foi configurada no servidor. Entre em contato com o administrador.'
-                    : apiDiagnostic.error === 'Token de autenticação inválido'
-                    ? 'Sessão expirada. Faça login novamente.'
-                    : apiDiagnostic.error === 'Falha na conexão com o servidor'
-                    ? 'Servidor backend não está respondendo. Tente novamente mais tarde.'
-                    : 'Serviço de inteligência artificial temporariamente indisponível.'
-                } {apiDiagnostic.details && (
-                  <span className="text-sm block mt-1 text-red-700">
-                    Detalhes: {apiDiagnostic.details}
-                  </span>
-                )}
+                <strong>Serviço temporariamente indisponível:</strong> {
+                  apiDiagnostic.error === 'Token de autenticação inválido'
+                    ? 'Sua sessão expirou. Faça login novamente para continuar.'
+                    : 'Não foi possível conectar com o sistema de geração de ideias. Tente novamente em alguns minutos ou entre em contato com nosso suporte se o problema persistir.'
+                }
               </div>
               <Button
                 onClick={handleTestApiKey}

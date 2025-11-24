@@ -5,11 +5,15 @@
 
 /**
  * Compara dois IDs de forma compatível com UUIDs (string) e números
- * @param id1 - Primeiro ID (pode ser string UUID ou número)
- * @param id2 - Segundo ID (pode ser string UUID ou número)
+ * @param id1 - Primeiro ID (pode ser string UUID, número ou null)
+ * @param id2 - Segundo ID (pode ser string UUID, número ou null)
  * @returns boolean - true se os IDs são equivalentes
  */
-export const compareIds = (id1: string | number, id2: string | number): boolean => {
+export const compareIds = (id1: string | number | null | undefined, id2: string | number | null | undefined): boolean => {
+  // Verificar valores nulos/undefined primeiro
+  if (id1 == null && id2 == null) return true;
+  if (id1 == null || id2 == null) return false;
+  
   // Comparação direta primeiro (mais eficiente)
   if (id1 === id2) return true;
   

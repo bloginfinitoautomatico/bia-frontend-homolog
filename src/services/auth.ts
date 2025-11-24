@@ -1,3 +1,5 @@
+import { getApiUrl as getApiUrlBase } from '../config/api';
+
 // Função para tratar respostas JSON da API
 async function handleJson(res: Response): Promise<any> {
   let data: any = null;
@@ -130,24 +132,11 @@ function normalizeUser(raw: any) {
  * };
  */
 
-// ✅ CORREÇÃO: Função para limpar URL e evitar barras duplas
+// ✅ CORREÇÃO: Usar a função oficial de API para construir URLs completas
 function getApiUrl(endpoint: string): string {
-  // Verifica se está em desenvolvimento pela URL ou variável de ambiente
-  const isDevelopment = import.meta.env.DEV || 
-                       window.location.hostname === 'localhost' || 
-                       window.location.hostname === '127.0.0.1';
-  
-  let baseUrl;
-  if (isDevelopment) {
-    baseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:8000';
-  } else {
-    // Usar URL de produção
-    baseUrl = import.meta.env.VITE_BACKEND_URL || 'https://api.bloginfinitoautomatico.com';
-  }
-  
-  baseUrl = baseUrl.replace(/\/$/, ''); // Remove barra final
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  return `${baseUrl}/api${cleanEndpoint}`;
+  const baseUrl = getApiUrlBase();
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+  return `${baseUrl}/${cleanEndpoint}`;
 }
 
 export async function registerUser(payload: {

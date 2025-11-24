@@ -89,6 +89,24 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
   // Dados dos planos mensais (sincronizado com backend)
   const monthlyPlans = [
     {
+      id: 'start',
+      name: 'Start',
+      price: 99,
+      originalPrice: null,
+      period: 'mês',
+      description: 'Publique até 50 artigos em até 5 sites diferentes.',
+      icon: Target,
+      color: 'green',
+      popular: false,
+      features: [
+        '5 sites conectados',
+        '50 artigos por mês',
+        'Apenas R$1,98 por artigo',
+        'Suporte por e-mail',
+        'Dashboard completo'
+      ]
+    },
+    {
       id: 'basico',
       name: 'Básico',
       price: 149,
@@ -406,6 +424,8 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
 
   const getIconForPlan = (slug: string) => {
     switch (slug) {
+      case 'start':
+        return Target;
       case 'basico':
         return Star;
       case 'intermediario':
@@ -507,32 +527,34 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
         </div>
       )}
 
-      <CardHeader className="text-center pb-4">
+      <CardHeader className="text-center pb-4 p-4 lg:p-6">
         <div className="flex flex-col items-center justify-center space-y-3">
-          <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
+          <div className={`w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-2xl flex items-center justify-center ${
             plan.isFree 
               ? 'bg-gray-100'
               : plan.popular 
                 ? 'bg-gradient-to-r from-purple-100 to-indigo-100' 
                 : plan.color === 'gradient' 
                   ? 'bg-gradient-to-r from-purple-200 to-indigo-200'
-                  : 'bg-purple-50'
+                  : plan.color === 'green'
+                    ? 'bg-green-50'
+                    : 'bg-purple-50'
           }`}>
             {getPlanIcon(plan)}
           </div>
           
-          <CardTitle className="font-poppins text-xl text-center text-gray-700">
+          <CardTitle className="font-poppins text-lg sm:text-xl lg:text-2xl text-center text-gray-700">
             {plan.name}
           </CardTitle>
         </div>
         
         <div className="space-y-2 mt-4">
-          <div className="flex items-center justify-center gap-2">
-            <span className="font-poppins text-3xl" style={{color: '#8c52ff'}}>
+          <div className="flex items-center justify-center gap-2 flex-wrap">
+            <span className="font-poppins text-2xl sm:text-3xl lg:text-4xl" style={{color: '#8c52ff'}}>
               {formatPrice(plan.price)}
             </span>
             {plan.period && !plan.isFree && (
-              <span className="font-montserrat text-gray-600">/{plan.period}</span>
+              <span className="font-montserrat text-sm sm:text-base text-gray-600">/{plan.period}</span>
             )}
           </div>
           
@@ -564,19 +586,19 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
         </div>
         
         <div className="text-center mt-3">
-          <p className="font-montserrat text-sm text-gray-600 text-center">
+          <p className="font-montserrat text-xs sm:text-sm lg:text-base text-gray-600 text-center px-2">
             {plan.description}
           </p>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4 lg:space-y-6 p-4 lg:p-6 pt-0">
         {/* Lista de funcionalidades */}
-        <div className="space-y-3">
+        <div className="space-y-2 lg:space-y-3">
           {(Array.isArray(plan.features) ? plan.features : []).map((feature: string, index: number) => (
-            <div key={index} className="flex items-start gap-3">
-              <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-              <span className="font-montserrat text-sm text-gray-700">
+            <div key={index} className="flex items-start gap-2 lg:gap-3">
+              <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-500 mt-1 flex-shrink-0" />
+              <span className="font-montserrat text-xs sm:text-sm lg:text-base text-gray-700 leading-relaxed">
                 {feature}
               </span>
             </div>
@@ -587,7 +609,7 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
         <Button
           onClick={() => handleSelectPlan(plan)}
           disabled={isLoading || (plan.isFree && currentPlan === 'Free')}
-          className={`w-full font-montserrat font-medium h-12 ${getPlanButtonStyle(plan)} transition-all duration-200`}
+          className={`w-full font-montserrat font-medium h-10 sm:h-12 lg:h-14 text-sm sm:text-base ${getPlanButtonStyle(plan)} transition-all duration-200`}
         >
           {isLoading ? (
             'Processando...'
@@ -607,15 +629,13 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
   return (
     <div className="space-y-8">
       {/* Header - Seguindo padrão das outras páginas */}
-      <div className="flex justify-between items-end">
-        <div className="flex-1">
-          <h1 className="font-poppins text-2xl font-semibold text-foreground mb-2">
-            Escolha seu Plano BIA
-          </h1>
-          <p className="font-montserrat text-muted-foreground">
-            Transforme sua produção de conteúdo com inteligência artificial. Escolha o plano ideal para suas necessidades.
-          </p>
-        </div>
+      <div className="text-left">
+        <h1 className="font-poppins text-xl sm:text-2xl lg:text-3xl font-semibold text-foreground mb-2">
+          Escolha seu Plano BIA
+        </h1>
+        <p className="font-montserrat text-sm sm:text-base text-muted-foreground">
+          Transforme sua produção de conteúdo com inteligência artificial. Escolha o plano ideal para suas necessidades.
+        </p>
       </div>
 
       {/* Alerta para desenvolvedores */}
@@ -631,47 +651,47 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
 
       {/* Tabs para organizar os produtos - Seguindo padrão das Ações Rápidas */}
       <Card className="border-border bg-card">
-        <CardContent className="p-6">
+        <CardContent className="p-4 sm:p-6">
           <Tabs defaultValue="monthly" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 bg-gray-50 rounded-lg p-1 gap-1">
+            <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 bg-gray-50 rounded-lg p-1 gap-1">
               <TabsTrigger 
                 value="monthly" 
-                className="font-montserrat font-medium text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-muted-foreground rounded-md transition-all duration-200 px-3 py-2"
+                className="font-montserrat font-medium text-xs sm:text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-muted-foreground rounded-md transition-all duration-200 px-2 sm:px-3 py-2"
               >
-                <Calendar className="w-4 h-4 mr-2" />
-                Planos Mensais
+                <Calendar className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden xs:inline">Planos </span>Mensais
               </TabsTrigger>
               <TabsTrigger 
                 value="packs" 
-                className="font-montserrat font-medium text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-muted-foreground rounded-md transition-all duration-200 px-3 py-2"
+                className="font-montserrat font-medium text-xs sm:text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-muted-foreground rounded-md transition-all duration-200 px-2 sm:px-3 py-2"
               >
-                <ShoppingBag className="w-4 h-4 mr-2" />
-                Packs de Artigos
+                <ShoppingBag className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                Packs <span className="hidden xs:inline">de Artigos</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="additional" 
-                className="font-montserrat font-medium text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-muted-foreground rounded-md transition-all duration-200 px-3 py-2"
+                className="font-montserrat font-medium text-xs sm:text-sm data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg text-muted-foreground rounded-md transition-all duration-200 px-2 sm:px-3 py-2"
               >
-                <Plus className="w-4 h-4 mr-2" />
+                <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
                 Adicionais
               </TabsTrigger>
             </TabsList>
 
             {/* Conteúdo da aba Planos Mensais - Seguindo padrão das outras páginas */}
             <TabsContent value="monthly" className="mt-6">
-              <div className="space-y-6">
+              <div className="space-y-4 lg:space-y-6">
                 <div className="text-center space-y-2">
-                  <h2 className="font-poppins text-lg font-medium text-foreground">
+                  <h2 className="font-poppins text-base sm:text-lg lg:text-xl font-medium text-foreground">
                     Planos de Assinatura Mensal
                   </h2>
-                  <p className="font-montserrat text-sm text-muted-foreground">
+                  <p className="font-montserrat text-xs sm:text-sm lg:text-base text-muted-foreground max-w-2xl mx-auto px-4">
                     Escolha o plano ideal para seu volume de produção de conteúdo
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5 gap-4 lg:gap-6">
                   {loadingPlans ? (
-                    <div className="col-span-full flex justify-center py-8">
+                    <div className="col-span-full flex justify-center py-12">
                       <div className="text-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-2" style={{ borderColor: '#8c52ff' }}></div>
                         <p className="font-montserrat text-sm text-muted-foreground">Carregando planos...</p>
@@ -691,16 +711,16 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
                 </div>
 
                 {/* Informações sobre os planos */}
-                <div className="p-4 rounded-lg bg-white border">
-                  <div className="flex items-start gap-3">
+                <div className="p-4 lg:p-6 rounded-lg bg-white border">
+                  <div className="flex flex-col sm:flex-row items-start gap-3">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(140, 82, 255, 0.1)' }}>
                       <Lightbulb className="w-4 h-4" style={{ color: '#8c52ff' }} />
                     </div>
-                    <div>
-                      <h3 className="font-poppins text-sm font-medium text-foreground mb-2">
+                    <div className="flex-1">
+                      <h3 className="font-poppins text-sm lg:text-base font-medium text-foreground mb-2">
                         Como funcionam os Planos Mensais?
                       </h3>
-                      <ul className="font-montserrat text-xs text-muted-foreground space-y-1">
+                      <ul className="font-montserrat text-xs lg:text-sm text-muted-foreground space-y-1 lg:space-y-2 grid grid-cols-1 md:grid-cols-2 gap-2">
                         <li>• <strong>Renovação Automática:</strong> Cobrança mensal recorrente com cancelamento a qualquer momento</li>
                         <li>• <strong>Artigos Inclusos:</strong> Cota mensal de artigos que renova todo mês</li>
                         <li>• <strong>Sites Ilimitados:</strong> Conecte quantos sites WordPress desejar</li>
@@ -714,26 +734,26 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
 
         {/* Conteúdo da aba Packs de Artigos - Seguindo padrão harmonizado */}
             <TabsContent value="packs" className="mt-6">
-              <div className="space-y-6">
+              <div className="space-y-4 lg:space-y-6">
                 <div className="text-center space-y-2">
-                  <h2 className="font-poppins text-lg font-medium text-foreground">
+                  <h2 className="font-poppins text-base sm:text-lg lg:text-xl font-medium text-foreground">
                     Packs de Artigos Extras
                   </h2>
-                  <p className="font-montserrat text-sm text-muted-foreground">
+                  <p className="font-montserrat text-xs sm:text-sm lg:text-base text-muted-foreground max-w-3xl mx-auto px-4">
                     Precisa de mais artigos? Adquira packs extras com preços especiais e aumente sua produção de conteúdo.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                <div className="packs-grid-2x3">
                   {loadingPlans ? (
-                    <div className="col-span-full flex justify-center py-8">
+                    <div className="col-span-full flex justify-center py-12">
                       <div className="text-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-2" style={{ borderColor: '#8c52ff' }}></div>
                         <p className="font-montserrat text-sm text-muted-foreground">Carregando packs...</p>
                       </div>
                     </div>
                   ) : (
-                    articlePacks.map((pack) => renderPlanCard(pack))
+                    articlePacks.slice(0, 6).map((pack) => renderPlanCard(pack))
                   )}
                 </div>
 
@@ -760,19 +780,19 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
 
             {/* Conteúdo da aba Serviços Adicionais - Seguindo padrão harmonizado */}
             <TabsContent value="additional" className="mt-6">
-              <div className="space-y-6">
+              <div className="space-y-4 lg:space-y-6">
                 <div className="text-center space-y-2">
-                  <h2 className="font-poppins text-lg font-medium text-foreground">
+                  <h2 className="font-poppins text-base sm:text-lg lg:text-xl font-medium text-foreground">
                     Serviços Adicionais
                   </h2>
-                  <p className="font-montserrat text-sm text-muted-foreground">
+                  <p className="font-montserrat text-xs sm:text-sm lg:text-base text-muted-foreground max-w-2xl mx-auto px-4">
                     Maximize seus resultados com nossos serviços especializados
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-16 max-w-6xl mx-auto">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 max-w-7xl mx-auto">
                   {loadingPlans ? (
-                    <div className="col-span-full flex justify-center py-8">
+                    <div className="col-span-full flex justify-center py-12">
                       <div className="text-center">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 mx-auto mb-2" style={{ borderColor: '#8c52ff' }}></div>
                         <p className="font-montserrat text-sm text-muted-foreground">Carregando produtos...</p>
@@ -966,32 +986,32 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
 
       {/* Seção do Plano Grátis - Seguindo padrão harmonizado */}
       <Card className="border-border bg-card">
-        <CardHeader className="pb-4">
+        <CardHeader className="pb-4 p-4 sm:p-6">
           <div className="text-center space-y-2">
-            <h2 className="text-xl font-semibold text-foreground font-poppins">
+            <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-foreground font-poppins">
               Quer começar gratuitamente?
             </h2>
-            <p className="font-montserrat text-sm text-muted-foreground">
+            <p className="font-montserrat text-xs sm:text-sm lg:text-base text-muted-foreground max-w-lg mx-auto">
               Teste todas as funcionalidades da BIA sem compromisso
             </p>
           </div>
         </CardHeader>
-        <CardContent className="p-4">
-          <div className="space-y-4">
-            <div className="max-w-md mx-auto">
+        <CardContent className="p-4 sm:p-6">
+          <div className="space-y-4 lg:space-y-6">
+            <div className="max-w-sm sm:max-w-md mx-auto">
               {renderPlanCard(freePlan)}
             </div>
 
-            <div className="p-4 rounded-lg bg-white border max-w-2xl mx-auto">
-              <div className="flex items-start gap-3">
+            <div className="p-4 lg:p-6 rounded-lg bg-white border max-w-3xl mx-auto">
+              <div className="flex flex-col sm:flex-row items-start gap-3">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: 'rgba(140, 82, 255, 0.1)' }}>
                   <Heart className="w-4 h-4" style={{ color: '#8c52ff' }} />
                 </div>
-                <div>
-                  <h3 className="font-poppins text-sm font-medium text-foreground mb-2">
+                <div className="flex-1">
+                  <h3 className="font-poppins text-sm lg:text-base font-medium text-foreground mb-2">
                     Sobre o Plano Grátis
                   </h3>
-                  <ul className="font-montserrat text-xs text-muted-foreground space-y-1">
+                  <ul className="font-montserrat text-xs lg:text-sm text-muted-foreground space-y-1 lg:space-y-2 grid grid-cols-1 md:grid-cols-2 gap-2">
                     <li>• Perfeito para testar a qualidade dos nossos artigos</li>
                     <li>• Sem compromisso ou cartão de crédito necessário</li>
                     <li>• Upgrade a qualquer momento para planos pagos</li>

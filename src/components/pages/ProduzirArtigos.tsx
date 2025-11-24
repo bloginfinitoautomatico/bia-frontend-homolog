@@ -905,7 +905,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
           details: testResult.details
         }));
       } else {
-        toast.error(`Sistema temporariamente indisponível: ${testResult.error}`);
+        toast.error('Não foi possível produzir artigos no momento. Tente novamente em alguns minutos.');
         setApiDiagnostic(prev => ({
           ...prev,
           hasKey: false,
@@ -1396,7 +1396,8 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
         palavras_chave: idea.generationParams?.palavrasChave || idea.tags?.join(', ') || 'tecnologia, artigo',
         idioma: 'Português',
         conceito: idea.generationParams?.conceito || idea.generationParams?.contexto || '',
-        empresa: ''
+        empresa: '',
+        idea_id: ideaId // ✅ ADICIONAR: ID da ideia para recuperar CTA
       };
       
       // ✅ CORREÇÃO: Validar se todos os campos obrigatórios estão preenchidos
@@ -1907,11 +1908,12 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
             },
             body: JSON.stringify({
               titulo: idea.titulo,
-              nicho: idea.generationParams?.nicho || idea.categoria || 'Geral',
+              nicho: idea.generationParams?.nicho || idea.categoria || 'Geral',  
               palavras_chave: idea.generationParams?.palavrasChave || idea.tags?.join(', ') || '',
               idioma: 'Português',
               conceito: idea.generationParams?.conceito || idea.generationParams?.contexto || '',
-              empresa: ''
+              empresa: '',
+              idea_id: ideaId // ✅ ADICIONAR: ID da ideia para recuperar CTA (batch)
             })
           });
 
@@ -2202,7 +2204,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
               method: 'PATCH',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('token')}`
+                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
               },
               body: JSON.stringify({
                 status: 'excluido',
@@ -2894,15 +2896,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
           <AlertDescription className="font-montserrat">
             <div className="flex items-center justify-between">
               <div>
-                <strong>Sistema temporariamente indisponível:</strong> {
-                  !apiDiagnostic.hasKey 
-                    ? 'Serviço de inteligência artificial em manutenção.'
-                    : 'Serviço de inteligência artificial temporariamente indisponível.'
-                } {apiDiagnostic.details && (
-                  <span className="text-sm block mt-1 text-red-700">
-                    Detalhes: {apiDiagnostic.details}
-                  </span>
-                )}
+                <strong>Serviço temporariamente indisponível:</strong> Não foi possível conectar com o sistema de produção de artigos. Tente novamente em alguns minutos ou entre em contato com nosso suporte se o problema persistir.
               </div>
               <Button
                 onClick={handleTestApiKey}

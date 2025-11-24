@@ -493,8 +493,8 @@ RETORNE APENAS O HTML COMPLETO DO ARTIGO, sem explicações ou comentários. Com
             
             return { 
               success: hasKey, 
-              message: hasKey ? 'Sistema OpenAI funcionando' : 'Chave OpenAI não configurada',
-              details: hasKey ? 'Chave OpenAI configurada e acessível' : 'Chave OpenAI não encontrada no servidor'
+              message: hasKey ? 'Sistema de IA funcionando' : 'Sistema de IA indisponível',
+              details: hasKey ? 'Integração com IA configurada e operacional' : 'Serviço temporariamente indisponível'
             };
           } catch (parseError) {
             console.error('❌ Erro ao processar resposta JSON:', parseError);

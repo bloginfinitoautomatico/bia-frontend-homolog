@@ -1,3 +1,5 @@
+import { getApiUrl as getApiUrlBase } from '../config/api';
+
 // Função para tratar respostas JSON da API
 async function handleJson(res: Response): Promise<any> {
   let data: any = null;
@@ -23,14 +25,11 @@ async function handleJson(res: Response): Promise<any> {
   return data;
 }
 
-// ✅ CORREÇÃO: Função para limpar URL e evitar barras duplas
+// ✅ CORREÇÃO: Usar a função oficial de API para construir URLs completas
 function getApiUrl(endpoint: string): string {
-  const baseUrl = (((import.meta as any).env && (import.meta as any).env.VITE_BACKEND_URL) || 'http://127.0.0.1:8000').replace(/\/$/, '');
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  // Garantir compatibilidade com o padrão usado pelo app: backend base + /api
-  const raw = (((import.meta as any).env && (import.meta as any).env.VITE_BACKEND_URL) || 'http://127.0.0.1:8000').replace(/\/$/, '');
-  const apiBase = raw.endsWith('/api') ? raw : `${raw}/api`;
-  return `${apiBase}${cleanEndpoint}`;
+  const baseUrl = getApiUrlBase();
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
+  return `${baseUrl}/${cleanEndpoint}`;
 }
 
 // Função para obter headers autenticados
