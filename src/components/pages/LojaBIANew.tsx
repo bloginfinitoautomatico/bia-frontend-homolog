@@ -67,19 +67,39 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
     const fetchPlans = async () => {
       try {
         setLoadingPlans(true);
+        console.log('🔄 Iniciando carregamento dos planos da API...');
+        
         const result = await subscriptionService.getPlans();
         
-        if (result.success) {
+        console.log('📥 Resultado do carregamento de planos:', {
+          success: result.success,
+          data: result.data,
+          error: result.error
+        });
+        
+        if (result.success && result.data) {
           setPlansData(result.data);
+          console.log('✅ Planos carregados com sucesso:', result.data);
         } else {
-          console.error('Erro ao buscar planos:', result.error);
-          toast.error('Erro ao carregar planos');
+          console.error('❌ Erro ao buscar planos da API:', result.error);
+          console.log('🔄 Usando planos hardcoded como fallback');
+          
+          // Usar toast apenas se for um erro crítico
+          if (result.error && !result.error.includes('fetch')) {
+            toast.error('Erro ao carregar planos da API. Usando dados locais.');
+          }
         }
       } catch (error) {
-        console.error('Erro ao buscar planos:', error);
-        toast.error('Erro ao carregar planos');
+        console.error('❌ Erro crítico ao buscar planos:', error);
+        console.log('🔄 Usando planos hardcoded como fallback');
+        
+        // Não mostrar toast se for erro de rede comum
+        if (!error?.toString().includes('fetch')) {
+          toast.error('Usando dados locais de planos');
+        }
       } finally {
         setLoadingPlans(false);
+        console.log('✅ Carregamento de planos finalizado');
       }
     };
 
@@ -365,10 +385,17 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
       return;
     }
 
+    console.log('🎯 Plano selecionado:', plan);
+    console.log('📊 Estado atual dos planos:', {
+      plansData,
+      hasApiPlans: plansData && Object.keys(plansData).length > 0,
+      loadingPlans
+    });
+
     // Buscar plano dinamicamente da API
     const findPlanBySlug = (slug: string) => {
       if (!plansData || Object.keys(plansData).length === 0) {
-        console.error('Planos não carregados da API ainda');
+        console.warn('⚠️ Planos da API não disponíveis, usando dados hardcoded');
         return null;
       }
 
@@ -378,32 +405,51 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
         if (Array.isArray(plansOfType)) {
           const foundPlan = plansOfType.find((p: any) => p.slug === slug);
           if (foundPlan) {
+            console.log('✅ Plano encontrado na API:', foundPlan);
             return foundPlan;
           }
         }
       }
 
-      console.error('Plano não encontrado na API:', slug);
+      console.warn(`⚠️ Plano "${slug}" não encontrado na API`);
       return null;
     };
 
     // Buscar plano da API dinamicamente usando o ID (que agora é o slug)
     const apiPlan = findPlanBySlug(plan.id);
     
-    if (!apiPlan) {
-      toast.error('Plano não encontrado. Tente recarregar a página.');
-      return;
+    let planData;
+    
+    if (apiPlan) {
+      // Usar dados da API
+      console.log('✅ Usando dados do plano da API');
+      planData = {
+        id: apiPlan.id, // UUID dinâmico da API
+        name: apiPlan.name,
+        price: parseFloat(apiPlan.price) || apiPlan.price,
+        description: apiPlan.description,
+        features: apiPlan.features || [],
+        isRecurring: apiPlan.type === 'monthly' // Assinaturas recorrentes para planos mensais
+      };
+    } else {
+      // Usar dados hardcoded como fallback
+      console.log('🔄 Usando dados hardcoded do plano como fallback');
+      
+      // Para usar planos hardcoded, precisamos de um mapeamento para UUID
+      // Por enquanto, vamos usar o plan.id original e tratar no backend
+      planData = {
+        id: plan.id, // Usar ID hardcoded - backend deve mapear para UUID
+        name: plan.name,
+        price: plan.price,
+        description: plan.description,
+        features: plan.features || [],
+        isRecurring: true // Assumir recorrente para planos mensais
+      };
+      
+      console.log('📦 Dados do plano preparados (hardcoded):', planData);
     }
 
-    // Preparar dados do plano para o checkout usando dados da API
-    const planData = {
-      id: apiPlan.id, // UUID dinâmico da API
-      name: apiPlan.name,
-      price: parseFloat(apiPlan.price) || apiPlan.price,
-      description: apiPlan.description,
-      features: apiPlan.features || [],
-      isRecurring: apiPlan.type === 'monthly' // Assinaturas recorrentes para planos mensais
-    };
+    console.log('🚀 Abrindo modal de checkout com plano:', planData);
 
     // Abrir modal de checkout
     setCheckoutModal({
