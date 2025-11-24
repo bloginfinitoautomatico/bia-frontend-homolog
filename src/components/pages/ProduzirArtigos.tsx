@@ -1416,20 +1416,61 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
       // Usar o endpoint generateArticle que usa o prompt_conteudo.php otimizado
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${apiUrl}/api/openai/generate-article`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(requestParams)
-      });
+      
+      // ✅ NOVA IMPLEMENTAÇÃO: Retry automático para problemas de rede
+      let response;
+      let apiResponse;
+      const maxRetries = 3;
+      let lastError;
+      
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+          if (attempt > 0) {
+            console.log(`🔄 Tentativa ${attempt + 1}/${maxRetries + 1} para gerar artigo ${ideaId}`);
+            setSingleProgress(prev => ({ ...prev, [ideaId]: 50 + (attempt * 10) }));
+            
+            // Aguardar um tempo exponencial entre tentativas
+            const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
+            await new Promise(resolve => setTimeout(resolve, delay));
+          }
+          
+          response = await fetch(`${apiUrl}/api/openai/generate-article`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(requestParams),
+            // Aumentar timeout para evitar problemas de rede
+            signal: AbortSignal.timeout(120000) // 2 minutos
+          });
 
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          }
+
+          apiResponse = await response.json();
+          
+          // Se chegou até aqui, a requisição foi bem-sucedida
+          break;
+          
+        } catch (error) {
+          lastError = error;
+          const isNetworkError = error.name === 'TypeError' && 
+            (error.message.includes('Failed to fetch') || 
+             error.message.includes('NetworkError') || 
+             error.message.includes('ERR_NETWORK_CHANGED'));
+          
+          const isTimeoutError = error.name === 'AbortError' || error.name === 'TimeoutError';
+          
+          if ((isNetworkError || isTimeoutError) && attempt < maxRetries) {
+            console.log(`⚠️ Erro de rede detectado (${error.message}), tentando novamente...`);
+            continue;
+          } else {
+            throw error;
+          }
+        }
       }
-
-      const apiResponse = await response.json();
       
       if (!apiResponse.success) {
         throw new Error(apiResponse.message || 'Erro na geração do artigo');
@@ -1593,7 +1634,60 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
     } catch (error) {
       console.error(`❌ Erro ao produzir artigo ${ideaId}:`, error);
       setSingleProgress(prev => ({ ...prev, [ideaId]: -1 }));
-      toast.error('Erro inesperado ao produzir artigo. Tente novamente.');
+      
+      // ✅ MELHOR TRATAMENTO DE ERROS ESPECÍFICOS
+      let errorMessage = 'Erro inesperado ao produzir artigo';
+      let shouldRetry = false;
+      
+      if (error.name === 'TypeError' && 
+          (error.message.includes('Failed to fetch') || 
+           error.message.includes('NetworkError') || 
+           error.message.includes('ERR_NETWORK_CHANGED'))) {
+        errorMessage = 'Erro de conectividade. Verifique sua conexão com a internet';
+        shouldRetry = true;
+      } else if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+        errorMessage = 'Tempo limite excedido. O servidor pode estar sobrecarregado';
+        shouldRetry = true;
+      } else if (error.message.includes('HTTP 429')) {
+        errorMessage = 'Muitas requisições. Aguarde um momento antes de tentar novamente';
+        shouldRetry = true;
+      } else if (error.message.includes('HTTP 500') || error.message.includes('HTTP 502') || error.message.includes('HTTP 503')) {
+        errorMessage = 'Servidor temporariamente indisponível. Tente novamente em alguns minutos';
+        shouldRetry = true;
+      } else if (error.message.includes('Limite atingido') || error.message.includes('créditos')) {
+        errorMessage = error.message;
+        shouldRetry = false;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // Mostrar botão de retry para erros recuperáveis
+      if (shouldRetry && retryCount < 2) {
+        toast.error(errorMessage, {
+          duration: 6000,
+          description: 'Tentaremos automaticamente em alguns segundos...',
+          action: {
+            label: 'Tentar Agora',
+            onClick: () => {
+              setTimeout(() => {
+                handleProduceFromIdea(ideaId, retryCount + 1);
+              }, 1000);
+            }
+          }
+        });
+        
+        // Retry automático após 5 segundos para erros de rede
+        setTimeout(() => {
+          if (processingSingle[ideaId] === undefined) { // Só se não estiver processando
+            handleProduceFromIdea(ideaId, retryCount + 1);
+          }
+        }, 5000);
+      } else {
+        toast.error(errorMessage, {
+          duration: 8000,
+          description: shouldRetry ? 'Várias tentativas falharam. Tente novamente mais tarde.' : 'Verifique os detalhes e tente novamente.'
+        });
+      }
     } finally {
       // ✅ REMOVER LOCK GLOBAL
       setGlobalProcessingLock(prev => {
@@ -1900,28 +1994,64 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
           // Usar o endpoint generateArticle que usa o prompt_conteudo.php otimizado
           const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
           const token = localStorage.getItem('auth_token');
-          const response = await fetch(`${apiUrl}/api/openai/generate-article`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              titulo: idea.titulo,
-              nicho: idea.generationParams?.nicho || idea.categoria || 'Geral',  
-              palavras_chave: idea.generationParams?.palavrasChave || idea.tags?.join(', ') || '',
-              idioma: 'Português',
-              conceito: idea.generationParams?.conceito || idea.generationParams?.contexto || '',
-              empresa: '',
-              idea_id: ideaId // ✅ ADICIONAR: ID da ideia para recuperar CTA (batch)
-            })
-          });
+          
+          // ✅ SISTEMA DE RETRY PARA PRODUÇÃO EM LOTE
+          let response;
+          let apiResponse;
+          const maxRetries = 2; // Menos tentativas em lote para não sobrecarregar
+          let lastError;
+          
+          for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+              if (attempt > 0) {
+                console.log(`🔄 Retry ${attempt}/${maxRetries} para artigo ${ideaId} (lote)`);
+                setBatchProgress(prev => ({ ...prev, [ideaId]: 45 + (attempt * 5) }));
+                
+                // Aguardar entre tentativas
+                await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+              }
+              
+              response = await fetch(`${apiUrl}/api/openai/generate-article`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                  titulo: idea.titulo,
+                  nicho: idea.generationParams?.nicho || idea.categoria || 'Geral',  
+                  palavras_chave: idea.generationParams?.palavrasChave || idea.tags?.join(', ') || '',
+                  idioma: 'Português',
+                  conceito: idea.generationParams?.conceito || idea.generationParams?.contexto || '',
+                  empresa: '',
+                  idea_id: ideaId // ✅ ADICIONAR: ID da ideia para recuperar CTA (batch)
+                }),
+                signal: AbortSignal.timeout(180000) // 3 minutos para produção em lote
+              });
 
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+              if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+              }
+
+              apiResponse = await response.json();
+              break; // Sucesso, sair do loop
+              
+            } catch (error) {
+              lastError = error;
+              const isRetryable = error.name === 'TypeError' && 
+                (error.message.includes('Failed to fetch') || 
+                 error.message.includes('NetworkError') || 
+                 error.message.includes('ERR_NETWORK_CHANGED')) ||
+                error.name === 'AbortError';
+              
+              if (isRetryable && attempt < maxRetries) {
+                console.log(`⚠️ Erro recuperável em lote (${error.message}), tentando novamente...`);
+                continue;
+              } else {
+                throw error;
+              }
+            }
           }
-
-          const apiResponse = await response.json();
           
           if (!apiResponse.success) {
             throw new Error(apiResponse.message || 'Erro na geração do artigo');
@@ -2037,6 +2167,30 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
         } catch (error) {
           console.error(`❌ Erro ao processar ideia ${ideaId}:`, error);
           setBatchProgress(prev => ({ ...prev, [ideaId]: -1 }));
+          
+          // ✅ TRATAMENTO MELHORADO DE ERROS EM LOTE
+          let errorMessage = 'Erro desconhecido';
+          
+          if (error.name === 'TypeError' && 
+              (error.message.includes('Failed to fetch') || 
+               error.message.includes('NetworkError') || 
+               error.message.includes('ERR_NETWORK_CHANGED'))) {
+            errorMessage = 'Erro de rede';
+            console.log(`🌐 Erro de rede para ${idea.titulo} - continuando com próximo artigo`);
+          } else if (error.name === 'AbortError') {
+            errorMessage = 'Timeout';
+            console.log(`⏰ Timeout para ${idea.titulo} - continuando com próximo artigo`);
+          } else if (error.message.includes('HTTP 429')) {
+            errorMessage = 'Rate limit';
+            console.log(`🚦 Rate limit para ${idea.titulo} - pausando produção por 30s`);
+            
+            // Pausa mais longa para rate limit
+            await new Promise(resolve => setTimeout(resolve, 30000));
+          } else if (error.message) {
+            errorMessage = error.message.substring(0, 50);
+          }
+          
+          console.log(`❌ Erro em lote para "${idea.titulo}": ${errorMessage}`);
           errorCount++;
         } finally {
           // ✅ REMOVER LOCK GLOBAL desta ideia no batch
