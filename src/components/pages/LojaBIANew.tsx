@@ -365,49 +365,42 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
       return;
     }
 
-    // Mapear IDs dos packs e produtos para os IDs do banco de dados
-    const getProductDatabaseId = (productId: string): string => {
-      const productMapping: Record<string, string> = {
-        // Planos mensais - UUIDs atualizados
-        'basico': '019aa1fc-1b2e-7183-b922-c8ff05744362',
-        'intermediario': '019aa1fc-1b37-7217-b24f-ff3e1888414a',
-        'avancado': '019aa1fc-1b39-712d-9d61-56d0b57f4476',
-        'bia': '019aa1fc-1b3b-70d8-9de4-0f53a0f0eace',
-        // Packs de artigos - UUIDs atualizados
-        'pack-50': '019aa1fc-1b3c-72e1-a7d9-54c5a6c05739',
-        'pack-100': '019aa1fc-1b3d-730d-86fc-397cfa781197',
-        'pack-200': '019aa1fc-1b3e-7320-9fdc-0c4c81d6f7e9',
-        'pack-300': '019aa1fc-1b3f-7000-a9b4-36208aca6ff3',
-        'pack-500': '019aa1fc-1b3f-7000-a9b4-36208afcd987',
-        'pack-1000': '019aa1fc-1b40-7062-9aba-ddb728e062e3',
-        // Produtos adicionais - UUIDs atualizados
-        'modelo-blog': '019aa1fc-1b41-718e-8bb6-8d3af1b27e04',
-        'landing-blog-personalizada': '019aa1fc-1b42-70e1-949b-63398d164b1b'
-      };
-      
-      const mappedId = productMapping[productId];
-      if (mappedId) {
-        return mappedId;
+    // Buscar plano dinamicamente da API
+    const findPlanBySlug = (slug: string) => {
+      if (!plansData || !plansData.plans) {
+        console.error('Planos não carregados da API ainda');
+        return null;
       }
-      
-      // Se não encontrar no mapeamento, verificar se é um UUID válido
-      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (uuidRegex.test(productId)) {
-        return productId;
+
+      // Buscar em todos os tipos de planos
+      for (const planType of Object.keys(plansData.plans)) {
+        const plansOfType = plansData.plans[planType];
+        const foundPlan = plansOfType.find((p: any) => p.slug === slug);
+        if (foundPlan) {
+          return foundPlan;
+        }
       }
-      
-      console.error('ID de produto não encontrado:', productId);
-      return '';
+
+      console.error('Plano não encontrado na API:', slug);
+      return null;
     };
 
-    // Preparar dados do plano para o checkout
+    // Buscar plano da API dinamicamente
+    const apiPlan = findPlanBySlug(plan.id);
+    
+    if (!apiPlan) {
+      toast.error('Plano não encontrado. Tente recarregar a página.');
+      return;
+    }
+
+    // Preparar dados do plano para o checkout usando dados da API
     const planData = {
-      id: getProductDatabaseId(plan.id),
-      name: plan.name,
-      price: parseFloat(plan.price) || plan.price,
-      description: plan.description,
-      features: plan.features || [],
-      isRecurring: plan.type === 'monthly' // Assinaturas recorrentes para planos mensais
+      id: apiPlan.id, // UUID dinâmico da API
+      name: apiPlan.name,
+      price: parseFloat(apiPlan.price) || apiPlan.price,
+      description: apiPlan.description,
+      features: apiPlan.features || [],
+      isRecurring: apiPlan.type === 'monthly' // Assinaturas recorrentes para planos mensais
     };
 
     // Abrir modal de checkout
