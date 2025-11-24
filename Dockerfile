@@ -13,9 +13,9 @@ RUN pnpm install --frozen-lockfile
 # Copia arquivos de configuração importantes
 COPY vite.config.js postcss.config.cjs tailwind.config.js ./
 
-# Define variável de ambiente para produção explicitamente
-ENV VITE_BACKEND_URL=https://api.bloginfinitoautomatico.com
-ENV VITE_API_URL=https://api.bloginfinitoautomatico.com
+# Define variável de ambiente para homologação
+ENV VITE_BACKEND_URL=https://api.homolog.bloginfinitoautomatico.com
+ENV VITE_API_URL=https://api.homolog.bloginfinitoautomatico.com
 ENV NODE_ENV=production
 ENV VITE_ENABLE_PROD_LOGS=false
 
