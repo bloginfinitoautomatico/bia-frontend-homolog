@@ -641,17 +641,24 @@ export function AgendarPosts({ userData }: AgendarPostsProps) {
                 <SelectContent>
                   {connectedSites && connectedSites.length > 0 ? (
                     connectedSites.map(site => {
-                      if (!site?.id || !site?.nome) {
+                      // Validação mais robusta para evitar valores vazios
+                      if (!site?.id || !site?.nome || site.id === '' || site.id === null || site.id === undefined) {
+                        console.warn('🚨 Site com dados inválidos ignorado:', site);
+                        return null;
+                      }
+                      const siteIdString = site.id.toString();
+                      if (!siteIdString || siteIdString === 'null' || siteIdString === 'undefined') {
+                        console.warn('🚨 Site com ID inválido ignorado:', site);
                         return null;
                       }
                       return (
-                        <SelectItem key={site.id} value={site.id.toString()}>
+                        <SelectItem key={site.id} value={siteIdString}>
                           {site.nome} - {site.url || 'URL não definida'}
                         </SelectItem>
                       );
                     }).filter(Boolean)
                   ) : (
-                    <SelectItem value="" disabled>
+                    <SelectItem value="no-sites" disabled>
                       Nenhum site conectado
                     </SelectItem>
                   )}
