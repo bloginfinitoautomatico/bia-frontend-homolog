@@ -192,11 +192,11 @@ export function Layout({ children, currentPage, onNavigate, onLogout, userData, 
       {/* Sidebar Mobile */}
       <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
         <SheetTrigger asChild>
-          <button className="mobile-menu-trigger fixed top-4 left-4 z-50 lg:hidden bg-white border border-gray-200 rounded-lg p-2 shadow-sm hover:bg-gray-50 transition-colors duration-200">
+          <button className="mobile-menu-trigger">
             <Menu className="w-5 h-5 text-gray-700" />
           </button>
         </SheetTrigger>
-        <SheetContent side="left" className="p-0 w-64 bg-white">
+        <SheetContent side="left" className="p-0 w-72 bg-white overflow-y-auto">
           <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
           <SheetDescription className="sr-only">
             Menu principal do sistema BIA com acesso a todas as funcionalidades
@@ -207,26 +207,30 @@ export function Layout({ children, currentPage, onNavigate, onLogout, userData, 
 
       {/* Conteúdo principal */}
       <div className="main-content">
-        {/* Header Mobile */}
+        {/* Header Mobile com logo e avatar */}
         <div className="mobile-header">
-          <div className="flex items-center justify-between p-4 bg-white border-b border-gray-200">
-            <ImageWithFallback
-              src="https://bloginfinitoautomatico.com.br/wp-content/uploads/2024/10/logo-bia-1.png"
-              alt="BIA"
-              className="h-8 w-auto"
-            />
-            <div className="flex items-center gap-3">
-              <div className="text-right">
-                <div className="font-poppins text-sm font-semibold text-gray-800 truncate max-w-24">
-                  {userData?.name || 'Usuário'}
-                </div>
-                <Badge 
-                  className="text-xs font-montserrat bg-[#8c52ff] text-white"
-                >
-                  {userData?.plano || 'Free'}
-                </Badge>
+          <ImageWithFallback
+            src="https://bloginfinitoautomatico.com.br/wp-content/uploads/2024/10/logo-bia-1.png"
+            alt="BIA"
+            className="h-8 w-auto"
+          />
+          <div className="flex items-center gap-2">
+            <div className="text-right hidden sm:block">
+              <div className="font-poppins text-sm font-semibold text-gray-800 truncate max-w-32">
+                {userData?.name || 'Usuário'}
               </div>
+              <Badge 
+                className="text-xs font-montserrat bg-[#8c52ff] text-white hover:bg-[#8c52ff]"
+              >
+                {userData?.plano || 'Free'}
+              </Badge>
             </div>
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={userData?.avatar} />
+              <AvatarFallback className="bg-[#8c52ff] text-white text-xs">
+                {userData?.name?.charAt(0)?.toUpperCase() || 'U'}
+              </AvatarFallback>
+            </Avatar>
           </div>
         </div>
 
