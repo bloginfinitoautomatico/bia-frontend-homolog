@@ -14,7 +14,7 @@
   --border: #e6e6e6;
   --radius: 0.5rem;
   /* Sidebar sizing used by components when Tailwind utilities are missing */
-  --sidebar-width: 18rem; /* 288px - Aumentado de 16rem para 18rem */
+  --sidebar-width: 16rem; /* 256px - tamanho otimizado para desktop */
   --sidebar-width-icon: 4.5rem; /* small collapsed width for icon-only mode */
 }
 

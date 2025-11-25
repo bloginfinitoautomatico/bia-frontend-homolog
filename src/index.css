@@ -300,6 +300,15 @@
 @media (min-width: 1024px) {
   .desktop-sidebar {
     display: flex;
+    width: 16rem; /* 256px - reduzido de 18rem */
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    background: var(--card-background);
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 40;
   }
 }
 
