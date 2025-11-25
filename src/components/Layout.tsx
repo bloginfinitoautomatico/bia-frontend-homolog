@@ -46,8 +46,7 @@ const menuItems = [
   { id: 'history', label: 'Histórico', icon: History },
   { id: 'deleted', label: 'Excluídos', icon: Trash2 },
   { id: 'store', label: 'Planos', icon: ShoppingBag },
-  { id: 'support', label: 'Suporte', icon: HelpCircle },
-  { id: 'account', label: 'Minha Conta', icon: User }
+  { id: 'support', label: 'Suporte', icon: HelpCircle }
 ];
 
 export function Layout({ children, currentPage, onNavigate, onLogout, userData, showAdminAccess }: LayoutProps) {
@@ -126,7 +125,24 @@ export function Layout({ children, currentPage, onNavigate, onLogout, userData, 
           </div>
         </div>
 
-        <Separator className="my-3 bg-gray-200" />
+        {/* Minha Conta - sem espaçamento */}
+        <button
+          className={`sidebar-item group mt-2 ${currentPage === 'account' ? 'active' : ''}`}
+          onClick={() => handleNavigate('account')}
+        >
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
+            currentPage === 'account'
+              ? 'bg-[#8c52ff] text-white'
+              : 'text-[#8c52ff] group-hover:bg-[#8c52ff] group-hover:text-white'
+          }`}>
+            <User className="w-4 h-4" />
+          </div>
+          <span className="font-poppins text-sm font-medium">
+            Minha Conta
+          </span>
+        </button>
+
+        <Separator className="my-2 bg-gray-200" />
 
         <div className="sidebar-actions space-y-1">
           {showAdminAccess && (

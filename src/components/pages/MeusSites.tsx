@@ -74,6 +74,7 @@ export function MeusSites({ userData, onUpdateUser, onNavigate }: MeusSitesProps
 
   // Verificar tipo de usuário e plano usando dados da API (mesma lógica do Dashboard)
   const isDev = user?.email === 'dev@bia.com' || user?.is_admin || user?.is_developer;
+  const isAdmin = user?.is_admin === true;
   const currentPlan = isDev ? 'Developer' : (user?.plano || 'Free');
   const isFree = !isDev && currentPlan === 'Free';
 
@@ -142,11 +143,11 @@ export function MeusSites({ userData, onUpdateUser, onNavigate }: MeusSitesProps
   };
 
   // Verificar se sites são ilimitados (mesma lógica do Dashboard)
-  const sitesUnlimited = usage?.sites?.unlimited ?? planLimits.isUnlimited ?? currentPlan === 'BIA';
+  const sitesUnlimited = usage?.sites?.unlimited ?? planLimits.isUnlimited ?? currentPlan === 'BIA' ?? currentPlan === 'Ilimitado';
   const articlesUnlimited = usage?.articles?.unlimited ?? (isDev || planLimits.articles >= 999999);
 
-  // Verificar se é desenvolvedor ou tem plano BIA (corrigido)
-  const isUnlimitedSites = isDev || sitesUnlimited;
+  // Verificar se é desenvolvedor ou tem plano ilimitado (corrigido para incluir plano Ilimitado)
+  const isUnlimitedSites = isDev || sitesUnlimited || planLimits.sites === Number.MAX_SAFE_INTEGER || planLimits.sites === -1 || planLimits.sites >= 999999;
   
   // Limites baseados nos dados reais da API (corrigido)
   const sitesLimit = isUnlimitedSites ? '∞' : planLimits.sites;
@@ -349,11 +350,11 @@ export function MeusSites({ userData, onUpdateUser, onNavigate }: MeusSitesProps
   // Estatísticas principais (corrigidas com dados reais da API)
   const mainStats = [
     {
-      title: 'Sites Ativos',
-      value: activeSites,
+      title: 'Sites Conectados',
+      value: realSiteCount,
       maxValue: isUnlimitedSites ? '∞' : formatLimitValue(planLimits.sites, isUnlimitedSites),
       icon: Monitor,
-      description: 'Publicando conteúdo',
+      description: 'Total de sites',
       isUnlimited: isUnlimitedSites
     },
     {
@@ -636,6 +637,17 @@ export function MeusSites({ userData, onUpdateUser, onNavigate }: MeusSitesProps
                           <h3 className="font-poppins text-lg text-black truncate">
                             {site.nome}
                           </h3>
+                          
+                          {/* Badge de Proprietário (somente para admins) */}
+                          {isAdmin && site.user && (
+                            <Badge 
+                              className="border-purple-200 text-purple-700 bg-purple-50 text-xs font-montserrat"
+                              title={`Email: ${site.user.email}`}
+                            >
+                              👤 {site.user.name || site.user.email.split('@')[0]}
+                            </Badge>
+                          )}
+                          
                           <Badge 
                             className={`text-xs font-montserrat ${
                               isActive 

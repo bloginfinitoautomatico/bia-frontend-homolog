@@ -174,8 +174,8 @@ export function Dashboard({ userData, onNavigate, onUpdateUser, onRefreshUser }:
     return 'Ideias Ilimitadas';
   };
 
-  // Verificar se sites são ilimitados no plano BIA
-  const sitesUnlimited = usage?.sites?.unlimited ?? planLimits.isUnlimited ?? currentPlan === 'BIA';
+  // Verificar se sites são ilimitados no plano BIA ou Ilimitado
+  const sitesUnlimited = usage?.sites?.unlimited ?? planLimits.isUnlimited ?? currentPlan === 'BIA' ?? currentPlan === 'Ilimitado';
   
   // CORREÇÃO: Detectar corretamente se usuário Free tem packs de artigos
   // Free puro = plano Free + exatamente 5 artigos (limite padrão)

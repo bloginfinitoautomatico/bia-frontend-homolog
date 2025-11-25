@@ -34,6 +34,12 @@ declare global {
 interface Site {
   id: number;
   user_id?: number;
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    plano: string;
+  };
   nome: string;
   name?: string;
   url: string;
@@ -365,6 +371,8 @@ class ApiService {
         // Converter resposta do backend para formato frontend
         const sites: Site[] = sitesArray.map((item: any) => ({
           id: item.id,
+          user_id: item.user_id,
+          user: item.user, // Incluir dados do usuário proprietário (para admins)
           nome: item.nome,
           url: item.url,
           descricao: item.descricao || '',

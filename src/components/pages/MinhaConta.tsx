@@ -795,25 +795,46 @@ export function MinhaConta({ userData, onNavigate, onUpdateUser }: MinhaContaPro
                 </div>
 
                 {purchaseHistory.slice(0, visibleHistoryItems).map((purchase, index) => {
-                  // Lógica para determinar o status correto
+                  // Lógica para determinar o status correto baseado no Asaas
                   const getStatusInfo = (purchase: Purchase) => {
+                    const status = purchase.status?.toUpperCase();
+                    
                     if (purchase.type === 'subscription' || purchase.tipo === 'assinatura') {
-                      // Para assinaturas, usar o status diretamente
-                      if (purchase.status === 'ACTIVE') {
-                        return { status: 'Ativo', color: 'text-green-600', bgColor: 'bg-green-500' };
-                      } else if (purchase.status === 'PENDING') {
-                        return { status: 'Pendente', color: 'text-yellow-600', bgColor: 'bg-yellow-500' };
-                      } else {
-                        return { status: 'Cancelado', color: 'text-red-600', bgColor: 'bg-red-500' };
+                      // Para assinaturas, mapear todos os status possíveis do Asaas
+                      switch (status) {
+                        case 'ACTIVE':
+                          return { status: 'Ativo', color: 'text-green-600', bgColor: 'bg-green-500' };
+                        case 'PENDING':
+                          return { status: 'Pendente', color: 'text-yellow-600', bgColor: 'bg-yellow-500' };
+                        case 'EXPIRED':
+                        case 'OVERDUE':
+                          return { status: 'Expirado', color: 'text-orange-600', bgColor: 'bg-orange-500' };
+                        case 'CANCELLED':
+                        case 'CANCELED':
+                          return { status: 'Cancelado', color: 'text-red-600', bgColor: 'bg-red-500' };
+                        default:
+                          return { status: 'Pendente', color: 'text-gray-600', bgColor: 'bg-gray-500' };
                       }
                     } else {
-                      // Para pagamentos, apenas confirmar se foi pago
-                      if (purchase.status === 'RECEIVED') {
-                        return { status: 'Pago', color: 'text-green-600', bgColor: 'bg-green-500' };
-                      } else if (purchase.status === 'PENDING') {
-                        return { status: 'Pendente', color: 'text-yellow-600', bgColor: 'bg-yellow-500' };
-                      } else {
-                        return { status: 'Cancelado', color: 'text-red-600', bgColor: 'bg-red-500' };
+                      // Para pagamentos (packs), mapear status do Asaas
+                      switch (status) {
+                        case 'RECEIVED':
+                        case 'CONFIRMED':
+                        case 'RECEIVED_IN_CASH':
+                          return { status: 'Pago', color: 'text-green-600', bgColor: 'bg-green-500' };
+                        case 'PENDING':
+                        case 'AWAITING_RISK_ANALYSIS':
+                          return { status: 'Pendente', color: 'text-yellow-600', bgColor: 'bg-yellow-500' };
+                        case 'OVERDUE':
+                          return { status: 'Vencido', color: 'text-orange-600', bgColor: 'bg-orange-500' };
+                        case 'REFUNDED':
+                        case 'REFUND_REQUESTED':
+                          return { status: 'Reembolsado', color: 'text-blue-600', bgColor: 'bg-blue-500' };
+                        case 'CHARGEBACK_REQUESTED':
+                        case 'CHARGEBACK_DISPUTE':
+                          return { status: 'Em Disputa', color: 'text-purple-600', bgColor: 'bg-purple-500' };
+                        default:
+                          return { status: 'Cancelado', color: 'text-red-600', bgColor: 'bg-red-500' };
                       }
                     }
                   };
