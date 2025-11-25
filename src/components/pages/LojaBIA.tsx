@@ -115,7 +115,7 @@ export function LojaBIA({ userData, onUpdateUser }: LojaBIAProps) {
     },
     {
       id: 'bia',
-      name: 'BIA',
+      name: 'Ilimitado',
       price: 999,
       originalPrice: null,
       period: 'mês',

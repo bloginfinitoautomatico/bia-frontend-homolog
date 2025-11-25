@@ -50,7 +50,7 @@ export const PLAN_DATA = [
     link: 'https://www.mercadopago.com.br/subscriptions/checkout?preapproval_plan_id=2cbd40eae7de49dcbebc4e15cdf7d793'
   },
   {
-    name: 'BIA',
+    name: 'Ilimitado',
     price: 'R$ 999,90',
     originalPrice: null,
     sites: 'Ilimitados',
