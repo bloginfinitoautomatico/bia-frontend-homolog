@@ -1,4 +1,4 @@
-import { getApiUrl as getApiUrlBase } from '../config/api';
+import { getApiUrl as getApiUrlBase, buildApiUrl } from '../config/api';
 
 // Função para tratar respostas JSON da API
 async function handleJson(res: Response): Promise<any> {
@@ -134,9 +134,7 @@ function normalizeUser(raw: any) {
 
 // ✅ CORREÇÃO: Usar a função oficial de API para construir URLs completas
 function getApiUrl(endpoint: string): string {
-  const baseUrl = getApiUrlBase();
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-  return `${baseUrl}/${cleanEndpoint}`;
+  return buildApiUrl(`api/${endpoint}`);
 }
 
 export async function registerUser(payload: {
@@ -151,7 +149,7 @@ export async function registerUser(payload: {
   try {
     console.log('📡 Registrando usuário:', payload.email);
     
-  const url = getApiUrl('/auth/register');
+  const url = getApiUrl('auth/register');
     console.log('🔗 URL da requisição:', url);
     
     const res = await fetch(url, {
@@ -195,7 +193,7 @@ export async function loginUser(payload: {
   try {
     console.log('📡 Fazendo login:', payload.email);
     
-  const url = getApiUrl('/auth/login');
+  const url = getApiUrl('auth/login');
     console.log('🔗 URL da requisição:', url);
     
     const res = await fetch(url, {
@@ -236,7 +234,7 @@ export async function logoutUser(token: string) {
   try {
     console.log('📡 Fazendo logout...');
     
-  const url = getApiUrl('/auth/logout');
+  const url = getApiUrl('auth/logout');
     console.log('🔗 URL da requisição:', url);
     
     const res = await fetch(url, {
@@ -270,7 +268,7 @@ export async function getCurrentUser(token: string) {
   try {
     console.log('📡 Buscando usuário atual...');
     
-  const url = getApiUrl('/auth/user');
+  const url = getApiUrl('auth/user');
     console.log('🔗 URL da requisição:', url);
     
     const res = await fetch(url, {
@@ -314,7 +312,7 @@ export async function verifyEmail(payload: {
   try {
     console.log('📡 Verificando email:', payload.email);
     
-    const url = getApiUrl('/auth/verify-email');
+    const url = getApiUrl('auth/verify-email');
     console.log('🔗 URL da requisição:', url);
     
     const res = await fetch(url, {
@@ -348,7 +346,7 @@ export async function resendVerificationCode(email: string) {
   try {
     console.log('📡 Reenviando código de verificação para:', email);
     
-    const url = getApiUrl('/auth/resend-verification');
+    const url = getApiUrl('auth/resend-verification');
     console.log('🔗 URL da requisição:', url);
     
     const res = await fetch(url, {
@@ -382,7 +380,7 @@ export async function forgotPassword(email: string) {
   try {
     console.log('📡 Solicitando recuperação de senha para:', email);
     
-    const url = getApiUrl('/auth/forgot-password');
+    const url = getApiUrl('auth/forgot-password');
     console.log('🔗 URL da requisição:', url);
     
     const res = await fetch(url, {
@@ -421,7 +419,7 @@ export async function resetPassword(payload: {
   try {
     console.log('📡 Redefinindo senha para:', payload.email);
     
-    const url = getApiUrl('/auth/reset-password');
+    const url = getApiUrl('auth/reset-password');
     console.log('🔗 URL da requisição:', url);
     
     const res = await fetch(url, {

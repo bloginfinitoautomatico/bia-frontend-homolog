@@ -62,7 +62,7 @@ export function AdminPanel({ onUpdateUser }: AdminPanelProps) {
       const token = localStorage.getItem('auth_token');
       
       // Fazer requisição para as estatísticas do Laravel
-      const response = await fetch(`${getApiUrl()}/admin/stats`, {
+      const response = await fetch(`${getApiUrl('admin/stats')}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -132,50 +132,35 @@ export function AdminPanel({ onUpdateUser }: AdminPanelProps) {
   const checkSystemHealth = async () => {
     try {
       const token = localStorage.getItem('auth_token');
-      // Verificar servidor Laravel
-      let serverStatus: 'operational' | 'degraded' | 'offline' = 'offline';
-      try {
-        const healthResponse = await fetch(`${getApiUrl()}/health`, {
-          method: 'GET',
-          headers: { 
-            'Authorization': `Bearer ${token}`,
-            'Accept': 'application/json'
-          }
-        });
-        serverStatus = healthResponse.ok ? 'operational' : 'degraded';
-      } catch {
-        serverStatus = 'offline';
-      }
-
-      // Verificar OpenAI
-      let openaiStatus: 'operational' | 'degraded' | 'offline' = 'offline';
-      try {
-        // Buscar chave OpenAI do backend
-        const token = localStorage.getItem('auth_token');
-        const openaiResponse = await fetch(`${getApiUrl()}/openai/get-key`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (openaiResponse.ok) {
-          const openaiData = await openaiResponse.json();
-          openaiStatus = openaiData.success && openaiData.key ? 'operational' : 'degraded';
-        } else {
-          openaiStatus = 'degraded';
+      
+      // Usar o novo endpoint de status do sistema
+      const statusResponse = await fetch(`${getApiUrl('system-status')}`, {
+        method: 'GET',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/json'
         }
-      } catch {
-        openaiStatus = 'offline';
-      }
-
-      setHealth({
-        database: 'operational', // Assumir que está funcionando se chegou até aqui
-        server: serverStatus,
-        openai: openaiStatus,
-        lastCheck: new Date().toISOString()
       });
+
+      if (statusResponse.ok) {
+        const statusData = await statusResponse.json();
+        const services = statusData.services;
+        
+        setHealth({
+          database: services.database.status === 'ok' ? 'operational' : 'offline',
+          server: services.server.status === 'operational' ? 'operational' : 'offline',
+          openai: services.openai.status === 'ok' ? 'operational' : 'offline',
+          lastCheck: new Date().toISOString()
+        });
+      } else {
+        // Fallback para status offline se o endpoint falhar
+        setHealth({
+          database: 'offline',
+          server: 'offline', 
+          openai: 'offline',
+          lastCheck: new Date().toISOString()
+        });
+      }
 
     } catch (error) {
       console.error('❌ Erro ao verificar saúde do sistema:', error);

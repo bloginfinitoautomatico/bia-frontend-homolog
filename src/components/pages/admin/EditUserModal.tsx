@@ -180,7 +180,7 @@ export function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalPr
 
       console.log('📝 Atualizando usuário:', { userId: user.id, updates: updatedFields });
 
-      const response = await fetch(`${getApiUrl()}/admin/users/${user.id}`, {
+      const response = await fetch(`${getApiUrl(`admin/users/${user.id}`)}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

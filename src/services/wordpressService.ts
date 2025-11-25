@@ -124,7 +124,7 @@ class WordPressService {
         return;
       }
 
-      const response = await fetch(`${getApiUrl()}/sites?include_wordpress_data=true`, {
+      const response = await fetch(`${getApiUrl('sites')}?include_wordpress_data=true`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

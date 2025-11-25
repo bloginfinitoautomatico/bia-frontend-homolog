@@ -53,6 +53,7 @@ export function MinhaConta({ userData, onNavigate, onUpdateUser }: MinhaContaPro
   const [updateSuccess, setUpdateSuccess] = useState(false);
   const [purchaseHistory, setPurchaseHistory] = useState<Purchase[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [visibleHistoryItems, setVisibleHistoryItems] = useState(10);
 
   // Estados para gestão de senha
   const [passwordForm, setPasswordForm] = useState({
@@ -137,7 +138,7 @@ export function MinhaConta({ userData, onNavigate, onUpdateUser }: MinhaContaPro
     
     try {
       setLoadingHistory(true);
-      const response = await fetch(`${getApiUrl()}/api/user/purchases`, {
+      const response = await fetch(`${getApiUrl('user/purchases')}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
           'Accept': 'application/json',
@@ -793,7 +794,7 @@ export function MinhaConta({ userData, onNavigate, onUpdateUser }: MinhaContaPro
                   <div>Ações</div>
                 </div>
 
-                {purchaseHistory.slice(0, 10).map((purchase, index) => {
+                {purchaseHistory.slice(0, visibleHistoryItems).map((purchase, index) => {
                   // Lógica para determinar o status correto
                   const getStatusInfo = (purchase: Purchase) => {
                     if (purchase.type === 'subscription' || purchase.tipo === 'assinatura') {
@@ -923,13 +924,22 @@ export function MinhaConta({ userData, onNavigate, onUpdateUser }: MinhaContaPro
                   );
                 })}
                 
-                {purchaseHistory.length > 10 && (
-                  <div className="text-center py-4">
-                    <p className="text-sm text-gray-500">
-                      Mostrando 10 de {purchaseHistory.length} transações
-                    </p>
+                {/* Botão para carregar mais itens */}
+                {visibleHistoryItems < purchaseHistory.length && (
+                  <div className="flex justify-center mt-6">
+                    <Button
+                      onClick={() => setVisibleHistoryItems(prev => Math.min(prev + 10, purchaseHistory.length))}
+                      className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2"
+                    >
+                      Carregar mais ({purchaseHistory.length - visibleHistoryItems} restantes)
+                    </Button>
                   </div>
                 )}
+                
+                {/* Contador de itens */}
+                <div className="text-center mt-4 text-sm text-gray-500">
+                  Mostrando {Math.min(visibleHistoryItems, purchaseHistory.length)} de {purchaseHistory.length} transações
+                </div>
               </div>
             )}
           </div>

@@ -99,7 +99,7 @@ export function AdminUsers({ onUpdateUser }: AdminUsersProps) {
       if (selectedStatus !== 'all') params.append('status', selectedStatus);
       if (searchTerm) params.append('search', searchTerm);
 
-      const response = await fetch(`${getApiUrl()}/admin/users?${params}`, {
+      const response = await fetch(`${getApiUrl('admin/users')}?${params}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -172,7 +172,7 @@ export function AdminUsers({ onUpdateUser }: AdminUsersProps) {
     try {
       const token = localStorage.getItem('auth_token');
 
-      const response = await fetch(`${getApiUrl()}/admin/users/${user.id}`, {
+      const response = await fetch(`${getApiUrl(`admin/users/${user.id}`)}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

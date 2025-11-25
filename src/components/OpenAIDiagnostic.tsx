@@ -69,7 +69,7 @@ export const OpenAIDiagnostic: React.FC<{ onClose?: () => void }> = ({ onClose }
 
       // Step 2: Testar health check
       try {
-        const healthResponse = await fetch(`${getApiUrl()}/api/health`, {
+        const healthResponse = await fetch(`${getApiUrl('health')}`, {
           method: 'GET',
           headers: { 
             'Authorization': `Bearer ${token}`,
@@ -103,7 +103,7 @@ export const OpenAIDiagnostic: React.FC<{ onClose?: () => void }> = ({ onClose }
 
       // Step 3: Verificar rota da chave OpenAI
       try {
-        const keyResponse = await fetch(`${getApiUrl()}/api/openai/get-key`, {
+        const keyResponse = await fetch(`${getApiUrl('openai/get-key')}`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,

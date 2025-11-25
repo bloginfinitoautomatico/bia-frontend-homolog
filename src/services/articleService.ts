@@ -1,4 +1,4 @@
-import { getApiUrl as getApiUrlBase } from '../config/api';
+import { getApiUrl } from '../config/api';
 
 // Função para tratar respostas JSON da API
 async function handleJson(res: Response): Promise<any> {
@@ -23,13 +23,6 @@ async function handleJson(res: Response): Promise<any> {
   
   // ✅ CORREÇÃO: Se chegou até aqui, é sucesso - retornar os dados
   return data;
-}
-
-// ✅ CORREÇÃO: Usar a função oficial de API para construir URLs completas
-function getApiUrl(endpoint: string): string {
-  const baseUrl = getApiUrlBase();
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint.slice(1) : endpoint;
-  return `${baseUrl}/${cleanEndpoint}`;
 }
 
 // Função para obter headers autenticados
@@ -84,7 +77,7 @@ export async function createArticle(payload: CreateArticlePayload) {
     console.log('📡 Criando artigo:', payload.titulo);
     console.log('📋 Payload completo sendo enviado:', JSON.stringify(payload, null, 2));
     
-    const url = getApiUrl('/artigos');
+    const url = buildApiUrl('api/artigos');
     console.log('🔗 URL da requisição:', url);
     
     // Garantir que site_id e ideia_id sejam strings quando presentes (backend espera UUID strings)
@@ -145,7 +138,7 @@ export async function getArticles() {
   try {
     console.log('📡 Buscando artigos do usuário');
     
-    const url = getApiUrl('/artigos');
+    const url = getApiUrl('artigos');
     console.log('🔗 URL da requisição:', url);
     
     const res = await fetch(url, {
@@ -178,9 +171,9 @@ export async function getArticles() {
  */
 export async function updateArticle(id: number, payload: Partial<CreateArticlePayload>) {
   try {
-    console.log('📡 Atualizando artigo:', id);
+    console.log('🗑️ Deletando artigo:', id);
     
-    const url = getApiUrl(`/artigos/${id}`);
+    const url = getApiUrl(`artigos/${id}`);
     console.log('🔗 URL da requisição:', url);
     
     const res = await fetch(url, {
@@ -212,9 +205,9 @@ export async function updateArticle(id: number, payload: Partial<CreateArticlePa
  */
 export async function deleteArticle(id: number) {
   try {
-    console.log('📡 Deletando artigo:', id);
+    console.log('📡 Buscando artigo por ID:', id);
     
-    const url = getApiUrl(`/artigos/${id}`);
+    const url = getApiUrl(`artigos/${id}`);
     console.log('🔗 URL da requisição:', url);
     
     const res = await fetch(url, {
@@ -246,7 +239,7 @@ export async function publishArticle(id: number) {
   try {
     console.log('📡 Publicando artigo:', id);
     
-    const url = getApiUrl(`/artigos/${id}/publish`);
+    const url = getApiUrl(`artigos/${id}/publish`);
     console.log('🔗 URL da requisição:', url);
     
     const res = await fetch(url, {

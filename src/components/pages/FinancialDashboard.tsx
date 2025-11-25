@@ -100,7 +100,7 @@ export function FinancialDashboard({ userData }: { userData?: any }) {
         return;
       }
 
-      const response = await fetch(`${getApiUrl()}/financial-dashboard`, {
+      const response = await fetch(`${getApiUrl('financial-dashboard')}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -128,7 +128,7 @@ export function FinancialDashboard({ userData }: { userData?: any }) {
   const exportUsers = async () => {
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch(`${getApiUrl()}/financial-dashboard/export`, {
+      const response = await fetch(`${getApiUrl('financial-dashboard/export')}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

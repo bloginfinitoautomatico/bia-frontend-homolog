@@ -164,7 +164,7 @@ export function ManageCreditsModal({ user, isOpen, onClose, onSave }: ManageCred
           }
         };
 
-        const response = await fetch(`${getApiUrl()}/admin/users/${user.id}`, {
+        const response = await fetch(`${getApiUrl(`admin/users/${user.id}`)}`, {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -194,7 +194,7 @@ export function ManageCreditsModal({ user, isOpen, onClose, onSave }: ManageCred
           quotas: newQuotas
         };
 
-        const response = await fetch(`${getApiUrl()}/admin/users/${user.id}`, {
+        const response = await fetch(`${getApiUrl(`admin/users/${user.id}`)}`, {
           method: 'PUT',
           headers: {
             'Authorization': `Bearer ${token}`,

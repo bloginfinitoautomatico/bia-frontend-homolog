@@ -90,7 +90,7 @@ export function UserManagement({ onUpdateUser }: UserManagementProps) {
       if (selectedStatus !== 'all') params.append('status', selectedStatus);
       if (searchTerm) params.append('search', searchTerm);
 
-      const response = await fetch(`${getApiUrl()}/api/admin/users?${params}`, {
+      const response = await fetch(`${getApiUrl('admin/users')}?${params}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -166,7 +166,7 @@ export function UserManagement({ onUpdateUser }: UserManagementProps) {
     try {
       const token = localStorage.getItem('auth_token');
 
-      const response = await fetch(`${getApiUrl()}/api/admin/users/${user.id}`, {
+      const response = await fetch(`${getApiUrl(`admin/users/${user.id}`)}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -198,7 +198,7 @@ export function UserManagement({ onUpdateUser }: UserManagementProps) {
     try {
       const token = localStorage.getItem('auth_token');
 
-      const response = await fetch(`${getApiUrl()}/api/admin/users/${selectedUser?.id}`, {
+      const response = await fetch(`${getApiUrl(`admin/users/${selectedUser?.id}`)}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
