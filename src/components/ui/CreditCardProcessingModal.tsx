@@ -13,6 +13,7 @@ import {
 import { toast } from 'sonner';
 import { getCurrentUser } from '../../services/auth';
 import { useBia } from '../BiaContext';
+import MetaPixelService from '../../services/metaPixel';
 
 interface CreditCardProcessingModalProps {
   isOpen: boolean;
@@ -105,6 +106,15 @@ export function CreditCardProcessingModal({
         if (result.success) {
           if (result.status === 'CONFIRMED' || result.status === 'RECEIVED') {
             setProcessingStatus('success');
+            
+            // Disparar evento Meta Pixel - Purchase
+            MetaPixelService.trackPurchase({
+              planName: paymentData.planName,
+              planSlug: result.plan_slug || 'unknown',
+              value: paymentData.value,
+              transactionId: paymentData.id,
+              predictedLtv: paymentData.value * 12 // Valor anual estimado
+            });
             
             // Atualizar dados do usuário e plano
             await refreshUserPlanData();

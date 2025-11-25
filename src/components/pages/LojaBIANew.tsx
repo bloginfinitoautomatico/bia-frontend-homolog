@@ -30,6 +30,7 @@ import {
 import { useBia } from '../BiaContext';
 import { subscriptionService } from '../../services/subscriptionService';
 import { toast } from 'sonner';
+import MetaPixelService from '../../services/metaPixel';
 
 interface LojaBIAProps {
   userData: any;
@@ -80,6 +81,17 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
         if (result.success && result.data) {
           setPlansData(result.data);
           console.log('✅ Planos carregados com sucesso:', result.data);
+          
+          // Disparar evento Meta Pixel - ViewContent (visualização de planos)
+          const planSlugs = [
+            ...(result.data.monthly || []).map((p: any) => p.slug),
+            ...(result.data.article_pack || []).map((p: any) => p.slug)
+          ];
+          
+          MetaPixelService.trackViewContent({
+            name: 'Planos BIA',
+            plans: planSlugs
+          });
         } else {
           console.error('❌ Erro ao buscar planos da API:', result.error);
           console.log('🔄 Usando planos hardcoded como fallback');

@@ -16,6 +16,7 @@ import { subscriptionService, CustomerData, CreditCardData } from '../../service
 import { toast } from 'sonner';
 import { PixPaymentModal } from './PixPaymentModal';
 import { CreditCardProcessingModal } from './CreditCardProcessingModal';
+import MetaPixelService from '../../services/metaPixel';
 
 interface Plan {
   id: string;
@@ -111,6 +112,22 @@ export function CheckoutModal({ isOpen, onClose, plan, userData, onSuccess }: Ch
         toast.error('Por favor, preencha todos os dados do cartão');
         return false;
       }
+      
+      // Disparar evento Meta Pixel - AddPaymentInfo
+      MetaPixelService.trackAddPaymentInfo({
+        planName: plan.name,
+        planSlug: plan.id,
+        value: plan.price,
+        paymentMethod: 'credit_card'
+      });
+    } else {
+      // Disparar evento Meta Pixel - AddPaymentInfo para PIX
+      MetaPixelService.trackAddPaymentInfo({
+        planName: plan.name,
+        planSlug: plan.id,
+        value: plan.price,
+        paymentMethod: billingType === 'PIX' ? 'pix' : 'boleto'
+      });
     }
 
     return true;
@@ -121,6 +138,13 @@ export function CheckoutModal({ isOpen, onClose, plan, userData, onSuccess }: Ch
 
     setIsLoading(true);
     setShowRetryButton(false);
+
+    // Disparar evento Meta Pixel - InitiateCheckout
+    MetaPixelService.trackInitiateCheckout({
+      planName: plan.name,
+      planSlug: plan.id,
+      value: plan.price
+    });
 
     try {
       const requestData = retryData || {

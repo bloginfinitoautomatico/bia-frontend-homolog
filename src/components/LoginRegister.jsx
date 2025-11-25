@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { registerUser, loginUser, verifyEmail, resendVerificationCode, forgotPassword } from '../services/auth';
 import { consumptionDebug } from '../utils/consumptionDebug';
 import { getApiUrl as getApiBaseUrl } from '../config/api';
+import MetaPixelService from '../services/metaPixel';
 
 // Função auxiliar para construir URLs da API
 const getApiUrl = (endpoint) => {
@@ -410,6 +411,11 @@ export function LoginRegister({ onLogin }) {
       const response = await registerUser(payload);
 
       if (response.success && response.user) {
+        // Disparar evento Meta Pixel - CompleteRegistration
+        MetaPixelService.trackCompleteRegistration({
+          plan: 'Free' // Plano inicial padrão
+        });
+
         // Mostrar tela de verificação de email
         setRegisteredUserEmail(response.user.email);
         setShowEmailVerification(true);
@@ -482,6 +488,11 @@ export function LoginRegister({ onLogin }) {
       });
 
       if (response.success) {
+        // Disparar evento Meta Pixel - Lead (email verificado)
+        MetaPixelService.trackLead({
+          plan: 'Free'
+        });
+
         toast.success('Email verificado com sucesso! Agora você pode fazer login.');
         setShowEmailVerification(false);
         setEmailVerificationCode('');
