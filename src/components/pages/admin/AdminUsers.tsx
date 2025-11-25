@@ -257,6 +257,7 @@ export function AdminUsers({ onUpdateUser }: AdminUsersProps) {
   const getPlanColor = (plan: string) => {
     const colors = {
       'Free': 'bg-gray-100 text-gray-700',
+      'Start': 'bg-emerald-100 text-emerald-700',
       'Básico': 'bg-blue-100 text-blue-700',
       'Intermediário': 'bg-green-100 text-green-700',
       'Avançado': 'bg-purple-100 text-purple-700',
@@ -331,6 +332,7 @@ export function AdminUsers({ onUpdateUser }: AdminUsersProps) {
               >
                 <option value="all">Todos os Planos</option>
                 <option value="Free">Free</option>
+                <option value="Start">Start</option>
                 <option value="Básico">Básico</option>
                 <option value="Intermediário">Intermediário</option>
                 <option value="Avançado">Avançado</option>

@@ -77,7 +77,8 @@ export function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalPr
 
   const plans = [
     { value: 'Free', label: 'Free', description: '1 site, 10 ideias, 5 artigos' },
-    { value: 'Básico', label: 'Básico', description: '5 sites, ideias ilimitadas, 100 artigos' },
+    { value: 'Start', label: 'Start', description: '5 sites, ideias ilimitadas, 50 artigos' },
+    { value: 'Básico', label: 'Básico', description: '10 sites, ideias ilimitadas, 100 artigos' },
     { value: 'Intermediário', label: 'Intermediário', description: '20 sites, ideias ilimitadas, 200 artigos' },
     { value: 'Avançado', label: 'Avançado', description: '50 sites, ideias ilimitadas, 500 artigos' },
     { value: 'BIA', label: 'BIA', description: 'Tudo ilimitado' },
@@ -245,6 +246,7 @@ export function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalPr
   const getPlanColor = (plan: string) => {
     const colors = {
       'Free': 'bg-gray-100 text-gray-700',
+      'Start': 'bg-emerald-100 text-emerald-700',
       'Básico': 'bg-blue-100 text-blue-700',
       'Intermediário': 'bg-green-100 text-green-700',
       'Avançado': 'bg-purple-100 text-purple-700',

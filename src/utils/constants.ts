@@ -10,6 +10,16 @@ export const PLAN_DATA = [
     link: null
   },
   {
+    name: 'Start',
+    price: 'R$ 99,90',
+    originalPrice: null,
+    sites: 5,
+    articles: 50,
+    features: ['5 Sites Conectados', '50 Artigos por mês', 'Ideias Ilimitadas', 'Suporte por E-mail', 'Dashboard Completo'],
+    popular: false,
+    link: null // Adicionar link quando disponível
+  },
+  {
     name: 'Básico',
     price: 'R$ 149,90',
     originalPrice: null,

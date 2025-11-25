@@ -96,6 +96,15 @@ export function Dashboard({ userData, onNavigate, onUpdateUser, onRefreshUser }:
   // Usar dados da API se disponíveis, senão calcular localmente
   const calculatedLimits = getPlanLimits(currentPlan);
   
+  // 🔍 DEBUG getPlanLimits para usuário Básico
+  if (currentPlan === 'Básico') {
+    console.log('🔍 [BÁSICO] Debug getPlanLimits:', {
+      currentPlan,
+      calculatedLimits,
+      user: user?.email
+    });
+  }
+  
   // 🔧 VALIDAÇÃO: Verificar se os dados do backend estão corretos para cada plano
   const validateBackendLimits = (plan: string, backendLimits: any) => {
     if (!backendLimits) return false;
@@ -200,6 +209,19 @@ export function Dashboard({ userData, onNavigate, onUpdateUser, onRefreshUser }:
     articles_at_limit: !isDev && !planLimits.isUnlimited && currentPlan !== 'Developer' && availableCredits.articles <= 0 && planLimits.articles > 0,
     articles_near_limit: !isDev && !planLimits.isUnlimited && currentPlan !== 'Developer' && availableCredits.articles > 0 && availableCredits.articles <= Math.max(1, Math.floor(planLimits.articles * 0.1)) && planLimits.articles > 0
   };
+
+  // 🔍 DEBUG específico para alertas de créditos - SIMPLIFICADO
+  if (currentPlan === 'Básico') {
+    console.log('🚨 [BÁSICO] Debug dos alertas de créditos:', {
+      userEmail: user?.email,
+      currentPlan,
+      availableCredits: availableCredits.articles,
+      planLimit: planLimits.articles,
+      threshold: Math.max(1, Math.floor(planLimits.articles * 0.1)),
+      shouldShowAlert: availableCredits.articles <= Math.max(1, Math.floor(planLimits.articles * 0.1)),
+      finalResult: creditsAlerts.articles_near_limit
+    });
+  }
 
   console.log('📊 Limites do plano atual:', {
     currentPlan,
@@ -738,6 +760,230 @@ export function Dashboard({ userData, onNavigate, onUpdateUser, onRefreshUser }:
               <div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: 'rgba(16, 185, 129, 0.05)' }}>
                 <p className="font-montserrat text-sm text-muted-foreground text-center">
                   🚀 Recursos avançados desbloqueados • 🎧 Suporte premium • 💡 Ideias ilimitadas
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : currentPlan === 'Start' ? (
+          <Card className="border-border bg-card">
+            <CardHeader className="pb-4">
+              <CardTitle className="font-poppins text-lg font-medium text-foreground flex items-center gap-2">
+                <Star size={20} style={{ color: '#10b981' }} />
+                Plano Start
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                      <Globe size={20} style={{ color: '#10b981' }} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-montserrat text-sm text-muted-foreground">Sites Conectados</p>
+                      <p className="font-poppins text-xl font-medium text-foreground">{realSiteCount}/{formatLimitValue(planLimits.sites, sitesUnlimited)}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                      <Lightbulb size={20} style={{ color: '#10b981' }} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-montserrat text-sm text-muted-foreground">Ideias Ilimitadas</p>
+                      <p className="font-poppins text-xl font-medium text-foreground">{realIdeaCount}/∞</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                      <FileText size={20} style={{ color: '#10b981' }} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-montserrat text-sm text-muted-foreground">Créditos Disponíveis</p>
+                      <p className="font-poppins text-xl font-medium text-foreground">{availableCredits.articles}</p>
+                      <p className="font-montserrat text-xs text-muted-foreground">
+                        de {planLimits.articles} do seu plano
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: 'rgba(16, 185, 129, 0.05)' }}>
+                <p className="font-montserrat text-sm text-muted-foreground text-center">
+                  🚀 Plano perfeito para começar • 💡 Ideias ilimitadas • 🎯 Foco na produtividade
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : currentPlan === 'Básico' ? (
+          <Card className="border-border bg-card">
+            <CardHeader className="pb-4">
+              <CardTitle className="font-poppins text-lg font-medium text-foreground flex items-center gap-2">
+                <Star size={20} style={{ color: '#3b82f6' }} />
+                Plano Básico
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                      <Globe size={20} style={{ color: '#3b82f6' }} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-montserrat text-sm text-muted-foreground">Sites Conectados</p>
+                      <p className="font-poppins text-xl font-medium text-foreground">{realSiteCount}/{formatLimitValue(planLimits.sites, sitesUnlimited)}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                      <Lightbulb size={20} style={{ color: '#3b82f6' }} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-montserrat text-sm text-muted-foreground">Ideias Ilimitadas</p>
+                      <p className="font-poppins text-xl font-medium text-foreground">{realIdeaCount}/∞</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                      <FileText size={20} style={{ color: '#3b82f6' }} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-montserrat text-sm text-muted-foreground">Créditos Disponíveis</p>
+                      <p className="font-poppins text-xl font-medium text-foreground">{availableCredits.articles}</p>
+                      <p className="font-montserrat text-xs text-muted-foreground">
+                        de {planLimits.articles} do seu plano
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: 'rgba(59, 130, 246, 0.05)' }}>
+                <p className="font-montserrat text-sm text-muted-foreground text-center">
+                  💪 Plano robusto para crescimento • 💡 Ideias ilimitadas • 📊 Dashboard completo
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : currentPlan === 'Intermediário' ? (
+          <Card className="border-border bg-card">
+            <CardHeader className="pb-4">
+              <CardTitle className="font-poppins text-lg font-medium text-foreground flex items-center gap-2">
+                <Star size={20} style={{ color: '#f59e0b' }} />
+                Plano Intermediário
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                      <Globe size={20} style={{ color: '#f59e0b' }} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-montserrat text-sm text-muted-foreground">Sites Conectados</p>
+                      <p className="font-poppins text-xl font-medium text-foreground">{realSiteCount}/{formatLimitValue(planLimits.sites, sitesUnlimited)}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                      <Lightbulb size={20} style={{ color: '#f59e0b' }} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-montserrat text-sm text-muted-foreground">Ideias Ilimitadas</p>
+                      <p className="font-poppins text-xl font-medium text-foreground">{realIdeaCount}/∞</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                      <FileText size={20} style={{ color: '#f59e0b' }} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-montserrat text-sm text-muted-foreground">Créditos Disponíveis</p>
+                      <p className="font-poppins text-xl font-medium text-foreground">{availableCredits.articles}</p>
+                      <p className="font-montserrat text-xs text-muted-foreground">
+                        de {planLimits.articles} do seu plano
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: 'rgba(245, 158, 11, 0.05)' }}>
+                <p className="font-montserrat text-sm text-muted-foreground text-center">
+                  🌟 Plano mais popular • 🎧 Suporte WhatsApp 24/7 • 🎨 Modelo de blog pronto
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : currentPlan === 'Avançado' ? (
+          <Card className="border-border bg-card">
+            <CardHeader className="pb-4">
+              <CardTitle className="font-poppins text-lg font-medium text-foreground flex items-center gap-2">
+                <Star size={20} style={{ color: '#ef4444' }} />
+                Plano Avançado
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                      <Globe size={20} style={{ color: '#ef4444' }} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-montserrat text-sm text-muted-foreground">Sites Conectados</p>
+                      <p className="font-poppins text-xl font-medium text-foreground">{realSiteCount}/{formatLimitValue(planLimits.sites, sitesUnlimited)}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                      <Lightbulb size={20} style={{ color: '#ef4444' }} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-montserrat text-sm text-muted-foreground">Ideias Ilimitadas</p>
+                      <p className="font-poppins text-xl font-medium text-foreground">{realIdeaCount}/∞</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center">
+                      <FileText size={20} style={{ color: '#ef4444' }} />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-montserrat text-sm text-muted-foreground">Créditos Disponíveis</p>
+                      <p className="font-poppins text-xl font-medium text-foreground">{availableCredits.articles}</p>
+                      <p className="font-montserrat text-xs text-muted-foreground">
+                        de {planLimits.articles} do seu plano
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: 'rgba(239, 68, 68, 0.05)' }}>
+                <p className="font-montserrat text-sm text-muted-foreground text-center">
+                  🚀 Máxima produtividade • 🎧 Suporte WhatsApp 24/7 • 🎨 Modelo de blog pronto
                 </p>
               </div>
             </CardContent>
