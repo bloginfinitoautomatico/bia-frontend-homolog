@@ -238,13 +238,13 @@ export function LojaBIA({ userData, onUpdateUser }: LojaBIAProps) {
         <div className="flex-1">
           <h1 className="font-poppins text-3xl text-black mb-2">
             {currentPlan === 'Free' 
-              ? 'Upgrade seu Plano BIA' 
-              : 'Escolha seu Plano BIA'
+              ? 'Upgrade seu Plano' 
+              : 'Escolha seu Plano'
             }
           </h1>
           <p className="font-montserrat text-gray-600 max-w-2xl">
             {currentPlan === 'Free' 
-              ? 'Você já experimentou o poder da BIA! Agora libere todo o potencial e escale sua produção de conteúdo sem limites.'
+              ? 'Você já experimentou o poder do Blog Infinito Automático! Agora libere todo o potencial e escale sua produção de conteúdo sem limites.'
               : 'Transforme sua produção de conteúdo com inteligência artificial. Escolha o plano ideal para suas necessidades e comece a gerar artigos de qualidade automaticamente.'
             }
           </p>
@@ -466,11 +466,11 @@ export function LojaBIA({ userData, onUpdateUser }: LojaBIAProps) {
       {/* Seção de benefícios */}
       <div className="bg-gradient-to-r from-gray-50 to-purple-50 rounded-2xl p-8">
         <div className="text-center mb-8">
-          <h2 className="font-poppins text-2xl text-black mb-4">
-            Por que escolher a BIA?
+          <h2 className="font-poppins text-2xl text-black mb-2">
+            Por que escolher o Blog Infinito Automático?
           </h2>
-          <p className="font-montserrat text-gray-600 max-w-2xl mx-auto">
-            A BIA revoluciona a criação de conteúdo com inteligência artificial avançada
+          <p className="font-montserrat text-gray-600 max-w-2xl">
+            O Blog Infinito Automático revoluciona a criação de conteúdo com inteligência artificial avançada
           </p>
         </div>
 
@@ -562,7 +562,7 @@ export function LojaBIA({ userData, onUpdateUser }: LojaBIAProps) {
                 Preciso de conhecimento técnico?
               </h3>
               <p className="font-montserrat text-sm text-gray-600">
-                Não! A BIA foi projetada para ser simples. 
+                Não! O Blog Infinito Automático foi projetado para ser simples. 
                 Basta conectar seu WordPress e começar a usar.
               </p>
             </CardContent>
@@ -581,7 +581,7 @@ export function LojaBIA({ userData, onUpdateUser }: LojaBIAProps) {
               🚀 Pronto para Escalar sua Produção?
             </h2>
             <p className="font-montserrat text-amber-700 max-w-2xl mx-auto">
-              Você já experimentou o poder da BIA! Agora é hora de liberar todo o potencial 
+              Você já experimentou o poder do Blog Infinito Automático! Agora é hora de liberar todo o potencial 
               e criar conteúdo sem limites.
             </p>
           </div>
@@ -688,7 +688,7 @@ export function LojaBIA({ userData, onUpdateUser }: LojaBIAProps) {
         </h2>
         <p className="font-montserrat text-purple-100 mb-6 max-w-2xl mx-auto">
           Junte-se a centenas de blogueiros e empresas que já transformaram 
-          sua produção de conteúdo com a BIA.
+          sua produção de conteúdo com o Blog Infinito Automático.
         </p>
         <div className="flex items-center justify-center gap-4">
           <Headphones className="w-5 h-5" />
