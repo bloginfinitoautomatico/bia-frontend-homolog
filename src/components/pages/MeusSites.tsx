@@ -185,7 +185,7 @@ export function MeusSites({ userData, onUpdateUser, onNavigate }: MeusSitesProps
       // 1. Testar conexão WordPress primeiro
       console.log('🔄 Testando conexão WordPress...');
       
-      const testResult = await fetch(`${getApiUrl()}/wordpress/test-connection`, {
+      const testResult = await fetch(getApiUrl('wordpress/test-connection'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -206,7 +206,7 @@ export function MeusSites({ userData, onUpdateUser, onNavigate }: MeusSitesProps
       console.log('📊 Buscando dados do WordPress...');
       
       const [categoriesRes, authorsRes, tagsRes] = await Promise.all([
-        fetch(`${getApiUrl()}/wordpress/get-categories`, {
+        fetch(getApiUrl('wordpress/get-categories'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -218,7 +218,7 @@ export function MeusSites({ userData, onUpdateUser, onNavigate }: MeusSitesProps
             wordpress_password: siteForm.applicationPassword
           })
         }),
-        fetch(`${getApiUrl()}/wordpress/get-authors`, {
+        fetch(getApiUrl('wordpress/get-authors'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -230,7 +230,7 @@ export function MeusSites({ userData, onUpdateUser, onNavigate }: MeusSitesProps
             wordpress_password: siteForm.applicationPassword
           })
         }),
-        fetch(`${getApiUrl()}/wordpress/get-tags`, {
+        fetch(getApiUrl('wordpress/get-tags'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

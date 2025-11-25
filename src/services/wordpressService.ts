@@ -529,7 +529,7 @@ class WordPressService {
       console.log('🚀 Enviando teste para o servidor...');
 
       // Usar a API do backend Laravel
-      const response = await fetch(`${getApiUrl()}/wordpress/test-connection`, {
+      const response = await fetch(`${getApiUrl('wordpress/test-connection')}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -548,7 +548,7 @@ class WordPressService {
 
       // Testar conexão bem-sucedida, agora buscar dados adicionais
       const [categoriesRes, authorsRes, tagsRes] = await Promise.all([
-        fetch(`${getApiUrl()}/wordpress/get-categories`, {
+        fetch(`${getApiUrl('wordpress/get-categories')}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -560,7 +560,7 @@ class WordPressService {
             wordpress_password: credentials.applicationPassword
           })
         }),
-        fetch(`${getApiUrl()}/wordpress/get-authors`, {
+        fetch(`${getApiUrl('wordpress/get-authors')}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -572,7 +572,7 @@ class WordPressService {
             wordpress_password: credentials.applicationPassword
           })
         }),
-        fetch(`${getApiUrl()}/wordpress/get-tags`, {
+        fetch(`${getApiUrl('wordpress/get-tags')}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -803,7 +803,7 @@ class WordPressService {
     try {
       console.log('🏷️ Criando nova tag no WordPress via backend:', tagData);
 
-      const response = await fetch(`${getApiUrl()}/wordpress/create-tag`, {
+      const response = await fetch(`${getApiUrl('wordpress/create-tag')}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -879,7 +879,7 @@ class WordPressService {
       console.log('🖼️ Dados da imagem preparados:', imageData);
 
       // Usar a API do backend Laravel para publicar posts
-      const response = await fetch(`${getApiUrl()}/wordpress/publish-post`, {
+      const response = await fetch(`${getApiUrl('wordpress/publish-post')}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -966,7 +966,7 @@ class WordPressService {
       }
 
       // Usar a API do backend Laravel para buscar posts
-      const response = await fetch(`${getApiUrl()}/wordpress/get-posts`, {
+      const response = await fetch(`${getApiUrl('wordpress/get-posts')}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1048,7 +1048,7 @@ class WordPressService {
       }
 
       // Usar a API do backend Laravel para buscar posts do calendário
-      const response = await fetch(`${getApiUrl()}/wordpress/get-calendar-posts`, {
+      const response = await fetch(`${getApiUrl('wordpress/get-calendar-posts')}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1160,7 +1160,7 @@ class WordPressService {
       });
 
       // Usar a API do backend Laravel para agendar posts
-      const response = await fetch(`${getApiUrl()}/wordpress/schedule-post`, {
+      const response = await fetch(`${getApiUrl('wordpress/schedule-post')}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

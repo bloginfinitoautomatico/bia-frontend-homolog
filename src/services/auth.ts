@@ -1,4 +1,4 @@
-import { getApiUrl as getApiUrlBase, buildApiUrl } from '../config/api';
+import { getApiUrl } from '../config/api';
 
 // Função para tratar respostas JSON da API
 async function handleJson(res: Response): Promise<any> {
@@ -132,10 +132,7 @@ function normalizeUser(raw: any) {
  * };
  */
 
-// ✅ CORREÇÃO: Usar a função oficial de API para construir URLs completas
-function getApiUrl(endpoint: string): string {
-  return buildApiUrl(`api/${endpoint}`);
-}
+// ✅ CORREÇÃO: Usar a função oficial de API importada
 
 export async function registerUser(payload: {
   name: string;

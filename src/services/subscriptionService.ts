@@ -110,7 +110,7 @@ class SubscriptionService {
         api_url: getApiUrl()
       });
 
-      const response = await this.fetchWithRetry(`${getApiUrl()}/subscriptions`, {
+      const response = await this.fetchWithRetry(getApiUrl('subscriptions'), {
         method: 'POST',
         headers: this.getAuthHeaders(),
         body: JSON.stringify(data)
@@ -187,7 +187,7 @@ class SubscriptionService {
         customer_name: data.customer_data.name
       });
 
-      const response = await this.fetchWithRetry(`${getApiUrl()}/subscriptions/payment`, {
+      const response = await this.fetchWithRetry(getApiUrl('subscriptions/payment'), {
         method: 'POST',
         headers: this.getAuthHeaders(),
         body: JSON.stringify(data)
@@ -243,7 +243,7 @@ class SubscriptionService {
 
   async getSubscriptions() {
     try {
-      const response = await fetch(`${getApiUrl()}/subscriptions`, {
+      const response = await fetch(getApiUrl('subscriptions'), {
         method: 'GET',
         headers: this.getAuthHeaders()
       });
@@ -269,7 +269,7 @@ class SubscriptionService {
 
   async cancelSubscription(subscriptionId: string) {
     try {
-      const response = await fetch(`${getApiUrl()}/subscriptions/${subscriptionId}`, {
+      const response = await fetch(getApiUrl(`subscriptions/${subscriptionId}`), {
         method: 'DELETE',
         headers: this.getAuthHeaders()
       });
@@ -295,7 +295,7 @@ class SubscriptionService {
 
   async getPlans() {
     try {
-      const response = await fetch(`${getApiUrl()}/subscriptions/plans`, {
+      const response = await fetch(getApiUrl('subscriptions/plans'), {
         method: 'GET',
         headers: this.getAuthHeaders()
       });
@@ -327,7 +327,7 @@ class SubscriptionService {
     is_subscription?: boolean;
   }) {
     try {
-      const response = await fetch(`${getApiUrl()}/subscriptions/credit-card`, {
+      const response = await fetch(getApiUrl('subscriptions/credit-card'), {
         method: 'POST',
         headers: this.getAuthHeaders(),
         body: JSON.stringify(data)
@@ -355,7 +355,7 @@ class SubscriptionService {
   // Obter cartões de teste
   async getTestCreditCards() {
     try {
-      const response = await fetch(`${getApiUrl()}/subscriptions/test-cards`, {
+      const response = await fetch(getApiUrl('subscriptions/test-cards'), {
         method: 'GET',
         headers: this.getAuthHeaders()
       });
@@ -382,7 +382,7 @@ class SubscriptionService {
   // Obter informações do ambiente
   async getEnvironmentInfo() {
     try {
-      const response = await fetch(`${getApiUrl()}/subscriptions/environment`, {
+      const response = await fetch(getApiUrl('subscriptions/environment'), {
         method: 'GET',
         headers: this.getAuthHeaders()
       });

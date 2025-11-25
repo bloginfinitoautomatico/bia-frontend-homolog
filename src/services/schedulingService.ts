@@ -1,9 +1,5 @@
-import { buildApiUrl } from '../config/api';
+import { getApiUrl } from '../config/api';
 import api from './api.js';
-
-// Função para construir URLs da API - usar implementação oficial
-// (renomeando para evitar conflito de nome)
-const getApiUrl = buildApiUrl;
 
 // Função para obter headers autenticados
 function getAuthHeaders(): Record<string, string> {

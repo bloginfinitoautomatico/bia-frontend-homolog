@@ -77,7 +77,7 @@ export async function createArticle(payload: CreateArticlePayload) {
     console.log('📡 Criando artigo:', payload.titulo);
     console.log('📋 Payload completo sendo enviado:', JSON.stringify(payload, null, 2));
     
-    const url = buildApiUrl('api/artigos');
+    const url = getApiUrl('artigos');
     console.log('🔗 URL da requisição:', url);
     
     // Garantir que site_id e ideia_id sejam strings quando presentes (backend espera UUID strings)

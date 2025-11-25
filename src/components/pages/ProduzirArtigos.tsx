@@ -2354,7 +2354,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
           
           try {
             // ✅ CHAMADA DIRETA AO BACKEND AGUARDANDO RESPOSTA
-            const response = await fetch(`${getApiUrl()}/ideias/${ideaId}`, {
+            const response = await fetch(getApiUrl(`ideias/${ideaId}`), {
               method: 'PATCH',
               headers: {
                 'Content-Type': 'application/json',
@@ -2724,7 +2724,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
       console.log(`📝 Publicando artigo "${article.titulo}" no WordPress...`);
       
       // Usar a API do Laravel para publicar
-      const publishUrl = `${getApiUrl()}/wordpress/publish-post`;
+      const publishUrl = getApiUrl('wordpress/publish-post');
       
       console.log('📡 URL de publicação:', publishUrl);
       

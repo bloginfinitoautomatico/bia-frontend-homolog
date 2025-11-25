@@ -11,6 +11,11 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    hmr: {
+      overlay: false
+    }
+  },
   // Removido proxy para evitar conflitos com CORS
   // O frontend fará requisições diretas para o backend
 })
