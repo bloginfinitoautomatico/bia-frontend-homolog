@@ -58,9 +58,9 @@ export function Layout({ children, currentPage, onNavigate, onLogout, userData, 
   };
 
   const SidebarContent = () => (
-    <div className="sidebar">
+    <div className="flex flex-col h-full bg-white">
       {/* Logo */}
-      <div className="sidebar-top justify-start">
+      <div className="p-4 border-b border-gray-200 flex items-center justify-start">
         <ImageWithFallback
           src="https://bloginfinitoautomatico.com.br/wp-content/uploads/2024/10/logo-bia-1.png"
           alt="BIA - Blog Infinito Automático"
@@ -69,7 +69,7 @@ export function Layout({ children, currentPage, onNavigate, onLogout, userData, 
       </div>
 
       {/* Menu de navegação */}
-      <div className="sidebar-nav">
+      <div className="flex-1 overflow-y-auto p-3">
         <ul className="space-y-1">
           {menuItems.map((item) => {
             const Icon = item.icon;
@@ -110,16 +110,22 @@ export function Layout({ children, currentPage, onNavigate, onLogout, userData, 
       </div>
 
       {/* Footer com informações do usuário */}
-      <div className="sidebar-footer">
-        <div className="user-info">
-          <div className="user-details">
-            <div className="user-name">
+      <div className="border-t border-gray-200 p-3 bg-white">
+        <div className="flex items-center gap-3 mb-3 p-2 bg-gray-50 rounded-lg">
+          <Avatar className="h-10 w-10">
+            <AvatarImage src={userData?.avatar} />
+            <AvatarFallback className="bg-[#8c52ff] text-white">
+              {userData?.name?.charAt(0)?.toUpperCase() || 'U'}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1 min-w-0">
+            <div className="font-poppins text-sm font-semibold text-gray-800 truncate">
               {userData?.name || 'Usuário'}
             </div>
             <div className="flex items-center gap-2 mt-1">
-              <div className={`user-plan ${userData?.plano !== 'Free' ? 'premium' : ''}`}>
+              <Badge className="text-xs font-montserrat bg-[#8c52ff] text-white hover:bg-[#8c52ff]">
                 {userData?.plano || 'Free'}
-              </div>
+              </Badge>
               <ConnectivityStatus />
             </div>
           </div>
@@ -144,38 +150,38 @@ export function Layout({ children, currentPage, onNavigate, onLogout, userData, 
 
         <Separator className="my-2 bg-gray-200" />
 
-        <div className="sidebar-actions space-y-1">
+        <div className="space-y-1">
           {showAdminAccess && (
             <>
               <button
-                className="sidebar-action-btn group"
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-all duration-200 group"
                 onClick={() => handleNavigate('admin')}
               >
-                <div className="w-6 h-6 rounded-md bg-gray-50 flex items-center justify-center group-hover:bg-blue-50 transition-colors duration-200">
-                  <Settings className="w-4 h-4 text-gray-600 group-hover:text-blue-600" />
+                <div className="w-6 h-6 rounded-md bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 transition-colors duration-200">
+                  <Settings className="w-4 h-4 text-blue-600" />
                 </div>
-                <span className="font-poppins text-sm text-gray-700 group-hover:text-blue-600">Painel Admin</span>
+                <span className="font-poppins text-sm">Painel Admin</span>
               </button>
               <button
-                className="sidebar-action-btn group"
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 transition-all duration-200 group"
                 onClick={() => handleNavigate('financial')}
               >
-                <div className="w-6 h-6 rounded-md bg-gray-50 flex items-center justify-center group-hover:bg-green-50 transition-colors duration-200">
-                  <DollarSign className="w-4 h-4 text-gray-600 group-hover:text-green-600" />
+                <div className="w-6 h-6 rounded-md bg-green-50 flex items-center justify-center group-hover:bg-green-100 transition-colors duration-200">
+                  <DollarSign className="w-4 h-4 text-green-600" />
                 </div>
-                <span className="font-poppins text-sm text-gray-700 group-hover:text-green-600">Painel Financeiro</span>
+                <span className="font-poppins text-sm">Painel Financeiro</span>
               </button>
             </>
           )}
           
           <button
-            className="sidebar-action-btn group"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 transition-all duration-200 group"
             onClick={onLogout}
           >
-            <div className="w-6 h-6 rounded-md bg-gray-50 flex items-center justify-center group-hover:bg-red-50 transition-colors duration-200">
-              <LogOut className="w-4 h-4 text-gray-600 group-hover:text-red-600" />
+            <div className="w-6 h-6 rounded-md bg-red-100 flex items-center justify-center group-hover:bg-red-600 group-hover:text-white transition-all duration-200">
+              <LogOut className="w-4 h-4" />
             </div>
-            <span className="font-poppins text-sm text-gray-700 group-hover:text-red-600">Sair</span>
+            <span className="font-poppins text-sm font-medium">Sair</span>
           </button>
         </div>
       </div>
@@ -185,7 +191,7 @@ export function Layout({ children, currentPage, onNavigate, onLogout, userData, 
   return (
     <div className="app-root">
       {/* Sidebar Desktop - mostrar apenas em telas grandes */}
-      <aside className="sidebar desktop-sidebar">
+      <aside className="desktop-sidebar">
         <SidebarContent />
       </aside>
 
