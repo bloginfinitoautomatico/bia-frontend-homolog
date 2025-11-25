@@ -855,6 +855,63 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state.user]);
 
+  // Listener para forçar recarregamento quando dados do usuário são atualizados pelo admin
+  useEffect(() => {
+    const handleForceReload = async () => {
+      console.log('🔄 [FORCE RELOAD] Dados do usuário foram atualizados pelo admin - recarregando...');
+      
+      // Buscar dados atualizados do usuário
+      try {
+        const token = localStorage.getItem('auth_token');
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+        
+        if (token) {
+          const response = await fetch(`${backendUrl}/api/auth/user`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+              'Accept': 'application/json'
+            }
+          });
+          
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.data) {
+              // Normalizar dados do usuário
+              const userData = result.data;
+              const normalized = {
+                id: userData.id,
+                email: userData.email,
+                name: userData.name,
+                plano: userData.plano || 'Free',
+                quotas: userData.quotas || { sites: 1, ideas: 10, articles: 5 },
+                consumo: userData.consumo || { sites: 0, ideas: 0, articles: 0 },
+                cpf: userData.cpf || '',
+                whatsapp: userData.whatsapp || '',
+                data_nascimento: userData.data_nascimento || null,
+                is_admin: userData.is_admin || false,
+                is_developer: userData.is_developer || false,
+                email_verified_at: userData.email_verified_at || null,
+              };
+              
+              dispatch({ type: 'LOGIN', payload: normalized });
+              console.log('✅ Dados do usuário atualizados com sucesso:', normalized);
+              toast.success('Seus dados foram atualizados!');
+            }
+          }
+        }
+      } catch (error) {
+        console.error('❌ Erro ao recarregar dados do usuário:', error);
+      }
+    };
+
+    window.addEventListener('bia:force-reload', handleForceReload);
+    
+    return () => {
+      window.removeEventListener('bia:force-reload', handleForceReload);
+    };
+  }, []);
+
   // ---------- Helpers de persistência ----------
   const persistImmediately = useCallback(
     (overrides?: Partial<Pick<BiaState, 'sites' | 'ideas' | 'articles' | 'user'>>) => {

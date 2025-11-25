@@ -208,6 +208,15 @@ export function EditUserModal({ user, isOpen, onClose, onSave }: EditUserModalPr
       if (data.success) {
         console.log('✅ Usuário atualizado:', data.data);
         
+        // Se o usuário editado é o usuário atualmente logado, limpar o cache
+        const currentUserEmail = localStorage.getItem('user_email');
+        if (data.data.email === currentUserEmail) {
+          console.log('🔄 Usuário editado é o usuário atual - limpando cache do localStorage');
+          localStorage.removeItem('bia-state');
+          // Disparar evento para forçar recarregamento
+          window.dispatchEvent(new CustomEvent('bia:force-reload'));
+        }
+        
         // Chamar callback para atualizar a lista
         onSave(data.data);
         
