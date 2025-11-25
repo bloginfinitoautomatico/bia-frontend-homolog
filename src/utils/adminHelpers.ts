@@ -41,7 +41,7 @@ export const isRecentActivity = (dateString: string | undefined, daysThreshold: 
 
 export const getPlanBadgeStyle = (plan: string): { bg: string; text: string; border: string } => {
   switch (plan?.toLowerCase()) {
-    case 'bia':
+    case 'ilimitado':
       return { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' };
     case 'free':
       return { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' };

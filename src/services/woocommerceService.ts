@@ -133,7 +133,8 @@ class WooCommerceService {
       line_items: [{
         id: 1,
         product_id: productId,
-        name: 'Plano BIA',
+        // Usar nome do plano derivado do mapping (remoção da marca antiga BIA)
+        name: PLAN_MAPPINGS.find(p => p.product_id === productId)?.plan_name || 'Plano',
         quantity: 1,
         total: '97.00'
       }],
@@ -189,7 +190,7 @@ class WooCommerceService {
         line_items: [{
           id: 1,
           product_id: 1873,
-          name: 'BIA - 1 Site',
+          name: '1 Site',
           quantity: 1,
           total: '97.00'
         }],
@@ -204,7 +205,7 @@ class WooCommerceService {
         line_items: [{
           id: 2,
           product_id: 3379,
-          name: 'BIA - 5 Sites',
+          name: '5 Sites',
           quantity: 1,
           total: '197.00'
         }],
