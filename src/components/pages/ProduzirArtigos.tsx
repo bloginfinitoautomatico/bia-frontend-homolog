@@ -1985,6 +1985,12 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
         errorMessage = error.message;
       }
       
+      // ✅ MARCAR IDEIA COM STATUS 'erro' para permitir exclusão e nova tentativa
+      updateIdea(ideaId, {
+        status: 'erro' as const,
+        errorMessage: errorMessage
+      });
+      
       // Mostrar botão de retry para erros recuperáveis
       if (shouldRetry && retryCount < 2) {
         toast.error(errorMessage, {
@@ -3758,7 +3764,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
           ) : (
             <div className="grid gap-4">
               {currentPageIdeas.map((idea) => {
-                const hasArticle = state.articles.some(a => a.ideaId === idea.id);
+                const hasArticle = idea.status !== 'erro' && state.articles.some(a => a.ideaId === idea.id);
                 const article = state.articles.find(a => a.ideaId === idea.id);
                 const isProcessing = processingSingle[idea.id];
                 const progress = singleProgress[idea.id];
@@ -3806,6 +3812,11 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
                           {idea.status === 'produzido' && (
                             <Badge className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">
                               Produzido
+                            </Badge>
+                          )}
+                          {idea.status === 'erro' && (
+                            <Badge className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded" title={idea.errorMessage}>
+                              ⚠️ Erro
                             </Badge>
                           )}
                         </div>

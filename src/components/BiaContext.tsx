@@ -67,7 +67,8 @@ interface Idea {
   categoria: string;
   tags: string[];
   siteId: string | number;
-  status: 'ativa' | 'produzido' | 'excluido' | 'publicado';
+  status: 'ativa' | 'produzido' | 'excluido' | 'publicado' | 'erro';
+  errorMessage?: string;
   cta?: any;
   generationParams?: any;
   wordpressData?: any;
