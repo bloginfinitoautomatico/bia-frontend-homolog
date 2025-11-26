@@ -60,6 +60,18 @@ interface Site {
   updatedAt: string;
 }
 
+interface CTA {
+  titulo: string;
+  descricao?: string;
+  botao: string;
+  link: string;
+  imagem?: string;
+  descricao_complementar?: string;
+  posicao: 'inicio' | 'meio' | 'final';
+  corBotao: string; // Hex color: #0066cc
+  corBorda?: string; // Hex color: #0066cc (defaults to corBotao)
+}
+
 interface Idea {
   id: number;
   titulo: string;
@@ -69,7 +81,7 @@ interface Idea {
   siteId: string | number;
   status: 'ativa' | 'produzido' | 'excluido' | 'publicado' | 'erro';
   errorMessage?: string;
-  cta?: any;
+  cta?: CTA;
   generationParams?: any;
   wordpressData?: any;
   articleId?: number;

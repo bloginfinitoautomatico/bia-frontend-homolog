@@ -40,6 +40,8 @@ interface FormData {
   ctaLink: string;
   ctaImagem: string;
   ctaPosicao: 'inicio' | 'meio' | 'final';
+  ctaCorBotao: string;
+  ctaCorBorda?: string;
 }
 
 interface WordPressData {
@@ -67,7 +69,9 @@ export function GerarIdeias({ userData, onPageChange, onUpdateUser }: GerarIdeia
     ctaBotao: '',
     ctaLink: '',
     ctaImagem: '',
-    ctaPosicao: 'final'
+    ctaPosicao: 'final',
+    ctaCorBotao: '#0066cc',
+    ctaCorBorda: '#0066cc'
   });
 
   const [wordpressData, setWordpressData] = useState<WordPressData>({
@@ -738,7 +742,9 @@ export function GerarIdeias({ userData, onPageChange, onUpdateUser }: GerarIdeia
         botao: formData.ctaBotao,
         link: formData.ctaLink,
         imagem: formData.ctaImagem,
-        posicao: formData.ctaPosicao
+        posicao: formData.ctaPosicao,
+        corBotao: formData.ctaCorBotao || '#0066cc',
+        corBorda: formData.ctaCorBorda || formData.ctaCorBotao || '#0066cc'
       } : undefined;
 
       console.log('📢 CTA configurado:', ctaData ? 'SIM' : 'NÃO', ctaData);
@@ -927,7 +933,7 @@ export function GerarIdeias({ userData, onPageChange, onUpdateUser }: GerarIdeia
     if (!hasCtaContent) return null;
 
     const ctaComponent = (
-      <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-dashed border-purple-300 rounded-lg p-6" style={{ textAlign: 'center' }}>
+      <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-dashed rounded-lg p-6" style={{ textAlign: 'center', borderColor: formData.ctaCorBorda || '#0066cc' }}>
         <div className="max-w-2xl mx-auto" style={{ textAlign: 'center' }}>
           {formData.ctaImagem && (
             <div className="mb-4 flex justify-center" style={{ textAlign: 'center' }}>
@@ -935,13 +941,14 @@ export function GerarIdeias({ userData, onPageChange, onUpdateUser }: GerarIdeia
                 <img 
                   src={formData.ctaImagem} 
                   alt="CTA Preview" 
-                  className="rounded-lg shadow-lg border-2 border-purple-200"
+                  className="rounded-lg shadow-lg border-2"
                   style={{
                     maxWidth: '400px',
                     maxHeight: '300px',
                     width: 'auto',
                     height: 'auto',
-                    objectFit: 'contain'
+                    objectFit: 'contain',
+                    borderColor: formData.ctaCorBorda || '#0066cc'
                   }}
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
@@ -956,7 +963,7 @@ export function GerarIdeias({ userData, onPageChange, onUpdateUser }: GerarIdeia
                     });
                   }}
                 />
-                <div className="absolute -bottom-2 -right-2 bg-purple-600 text-white text-xs px-2 py-1 rounded-full shadow-md">
+                <div className="absolute -bottom-2 -right-2 text-white text-xs px-2 py-1 rounded-full shadow-md" style={{ backgroundColor: formData.ctaCorBotao || '#0066cc' }}>
                   Preview
                 </div>
               </div>
@@ -964,7 +971,7 @@ export function GerarIdeias({ userData, onPageChange, onUpdateUser }: GerarIdeia
           )}
           
           {formData.ctaTitulo && (
-            <h3 className="font-poppins text-xl text-purple-800 mb-3" style={{ textAlign: 'center' }}>
+            <h3 className="font-poppins text-xl mb-3" style={{ textAlign: 'center', color: formData.ctaCorBotao || '#0066cc' }}>
               {formData.ctaTitulo}
             </h3>
           )}
@@ -978,8 +985,9 @@ export function GerarIdeias({ userData, onPageChange, onUpdateUser }: GerarIdeia
           {formData.ctaBotao && (
             <div style={{ textAlign: 'center' }}>
               <Button 
-                className="font-montserrat btn-bia px-6 py-2"
+                className="font-montserrat px-6 py-2 text-white"
                 disabled
+                style={{ backgroundColor: formData.ctaCorBotao || '#0066cc' }}
               >
                 {formData.ctaBotao}
                 {formData.ctaLink && <ExternalLink className="ml-2 h-4 w-4 text-current" />}
@@ -1002,7 +1010,7 @@ export function GerarIdeias({ userData, onPageChange, onUpdateUser }: GerarIdeia
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="font-poppins flex items-center">
-            <Eye className="mr-2 h-5 w-5 text-purple-600" />
+            <Eye className="mr-2 h-5 w-5" style={{ color: formData.ctaCorBotao || '#0066cc' }} />
             Preview do CTA (Aparecerá no {formData.ctaPosicao} do artigo)
           </CardTitle>
         </CardHeader>
@@ -1484,6 +1492,67 @@ export function GerarIdeias({ userData, onPageChange, onUpdateUser }: GerarIdeia
                   placeholder="Descrição complementar do CTA..."
                   className="font-montserrat"
                 />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 rounded-lg bg-white border">
+                  <Label className="font-montserrat text-sm font-medium text-foreground mb-2">Cor do Botão</Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={formData.ctaCorBotao || '#0066cc'}
+                      onChange={(e) => {
+                        const color = e.target.value;
+                        handleInputChange('ctaCorBotao', color);
+                        handleInputChange('ctaCorBorda', color);
+                      }}
+                      className="w-12 h-10 rounded border cursor-pointer"
+                    />
+                    <Input
+                      value={formData.ctaCorBotao || '#0066cc'}
+                      onChange={(e) => {
+                        const color = e.target.value;
+                        if (/^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$/.test(color)) {
+                          handleInputChange('ctaCorBotao', color);
+                          handleInputChange('ctaCorBorda', color);
+                        }
+                      }}
+                      placeholder="#0066cc"
+                      className="font-montserrat flex-1"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">Cor do botão e borda esquerda do CTA</p>
+                </div>
+
+                <div className="p-4 rounded-lg bg-white border">
+                  <Label className="font-montserrat text-sm font-medium text-foreground mb-2">Cores Predefinidas</Label>
+                  <div className="flex gap-2 flex-wrap">
+                    {[
+                      { name: 'Roxo BIA', color: '#8c52ff' },
+                      { name: 'Azul', color: '#0066cc' },
+                      { name: 'Verde', color: '#10b981' },
+                      { name: 'Vermelho', color: '#ef4444' },
+                      { name: 'Laranja', color: '#f97316' },
+                      { name: 'Rosa', color: '#ec4899' }
+                    ].map(({ name, color }) => (
+                      <button
+                        key={color}
+                        onClick={() => {
+                          handleInputChange('ctaCorBotao', color);
+                          handleInputChange('ctaCorBorda', color);
+                        }}
+                        className="px-3 py-1 rounded text-xs font-montserrat text-white border-2"
+                        style={{
+                          backgroundColor: color,
+                          borderColor: formData.ctaCorBotao === color ? '#000' : 'transparent'
+                        }}
+                        title={name}
+                      >
+                        {name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <div className="p-4 rounded-lg bg-white border">
