@@ -802,6 +802,13 @@ export function GerarIdeias({ userData, onPageChange, onUpdateUser }: GerarIdeia
       const newIdeas = ideiasList.map((titulo: string, index: number) => {
         const tituloLimpo = (titulo as string).replace(/^\d+\.\s*/, '').replace(/['"]/g, '').trim();
         
+        console.log('🔍 DEBUG - Criando ideia:', {
+          titulo: tituloLimpo,
+          formDataSiteId: formData.siteId,
+          formDataSiteIdType: typeof formData.siteId,
+          selectedSite: selectedSite ? { id: selectedSite.id, uuid: selectedSite.uuid, nome: selectedSite.nome } : null
+        });
+        
         const ideaData = {
           titulo: tituloLimpo,
           descricao: `Ideia gerada para o nicho de ${formData.nicho}, focando nas palavras-chave: ${formData.palavrasChave}. Site: ${selectedSite?.nome}. ${selectedAuthor ? `Autor: ${selectedAuthor.name}. ` : ''}${selectedCategories.length > 0 ? `Categorias: ${selectedCategories.map(c => c?.name).join(', ')}. ` : ''}${formData.contexto ? `Contexto adicional: ${formData.contexto}` : ''}`,
