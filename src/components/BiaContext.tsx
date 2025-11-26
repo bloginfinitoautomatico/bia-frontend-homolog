@@ -178,7 +178,10 @@ class ApiService {
   private authToken: string = '';
 
   constructor() {
-    const backendUrl = (import.meta.env.VITE_BACKEND_URL as string) || (import.meta.env.VITE_API_URL as string) || 'http://127.0.0.1:8000';
+    // Preferir URL do .env; se ausente, usar mesmo domínio do frontend
+    const envBackend = (import.meta.env.VITE_BACKEND_URL as string) || (import.meta.env.VITE_API_URL as string);
+    const sameOrigin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : '';
+    const backendUrl = envBackend || sameOrigin || 'http://127.0.0.1:8000';
     this.BASE_URL = `${backendUrl.replace(/\/$/, '')}/api`;
     
     // Carregar token do localStorage
@@ -188,7 +191,7 @@ class ApiService {
     }
     
     console.log('🔧 API Base URL configurada:', this.BASE_URL);
-    console.log('🔧 Backend URL do .env:', import.meta.env.VITE_BACKEND_URL as string || import.meta.env.VITE_API_URL as string);
+    console.log('🔧 Backend URL do .env:', import.meta.env.VITE_BACKEND_URL as string || import.meta.env.VITE_API_URL as string || sameOrigin);
   }
 
   setAuthToken(token: string) {
@@ -402,7 +405,11 @@ class ApiService {
 
   async updateSite(id: number, updates: Partial<Site>): Promise<{ success: boolean; data?: Site; error?: string }> {
     try {
-      const result = await this.makeRequest(`/sites/${id}`, {
+      // Usar UUID do backend quando disponível
+      const targetSite = state.sites.find(s => s.id === id);
+      const backendId = (targetSite && targetSite.uuid) ? targetSite.uuid : id;
+
+      const result = await this.makeRequest(`/sites/${backendId}`, {
         method: 'PUT',
         body: JSON.stringify({
           nome: updates.nome,
@@ -445,7 +452,11 @@ class ApiService {
 
   async deleteSite(id: number): Promise<{ success: boolean; error?: string }> {
     try {
-      const result = await this.makeRequest(`/sites/${id}`, {
+      // Usar UUID do backend quando disponível
+      const targetSite = state.sites.find(s => s.id === id);
+      const backendId = (targetSite && targetSite.uuid) ? targetSite.uuid : id;
+
+      const result = await this.makeRequest(`/sites/${backendId}`, {
         method: 'DELETE',
       });
       return result;
@@ -1428,20 +1439,29 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
     try {
       if (isUuid(maybeSiteId)) return String(maybeSiteId);
 
-      // Procurar site no estado local
+      // Procurar site no estado local por ID numérico
       const localSite = state.sites.find(s => String(s.id) === String(maybeSiteId));
-      if (!localSite) return null;
+      if (!localSite) {
+        console.warn('⚠️ Site local não encontrado para ID:', maybeSiteId);
+        return null;
+      }
 
-      // Se o site local já possui um id que parece uuid, retornar
+      // ✅ CORREÇÃO: Verificar se o site local tem uuid mapeado
+      if (localSite.uuid && isUuid(localSite.uuid)) {
+        console.log('✅ Site local tem UUID mapeado:', localSite.uuid, localSite.nome || localSite.url);
+        return String(localSite.uuid);
+      }
+
+      // Se o id do site local já é UUID, retornar
       if (isUuid(localSite.id)) return String(localSite.id);
 
-      // Tentar casar por URL ou nome no backend (forçar refresh das sites do servidor)
+      // Fallback: buscar no servidor por URL/nome
+      console.log('⚠️ UUID não encontrado localmente, buscando no servidor por URL/nome...');
       try {
         const sitesResult = await apiService.getSites();
         if (sitesResult.success && sitesResult.data) {
           const serverSites = sitesResult.data as any[];
 
-          // Normalizar URL para busca
           const normalize = (u?: string) => (u || '').toLowerCase().replace(/https?:\/\//, '').replace(/\/$/, '');
           const localUrl = normalize((localSite as any).url);
           const localName = ((localSite as any).nome || (localSite as any).name || '').toLowerCase().trim();
@@ -1453,14 +1473,15 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
           });
 
           if (matched) {
-            console.log('🔗 Site local mapeado para site do backend:', matched.id, matched.nome || matched.url);
+            console.log('🔗 Site local mapeado para site do backend via busca:', matched.id, matched.nome || matched.url);
             return String(matched.id);
           }
         }
       } catch (err) {
-        console.warn('⚠️ Falha ao buscar sites do servidor durante mapemento de site local:', err);
+        console.warn('⚠️ Falha ao buscar sites do servidor durante mapeamento:', err);
       }
 
+      console.warn('⚠️ Não foi possível mapear site ID local para UUID do backend:', maybeSiteId);
       return null;
     } catch (err) {
       console.warn('⚠️ Erro ao resolver site id:', err);

@@ -1,26 +1,15 @@
 // Configuração da API - função base para obter URL do backend
 function getBaseApiUrl(): string {
-  // Verifica se estamos em desenvolvimento
-  const isDevelopment = import.meta.env.DEV || 
-                       window.location.hostname === 'localhost' || 
-                       window.location.hostname === '127.0.0.1';
-  
-  if (isDevelopment) {
-    return 'http://localhost:8000';
-  }
-  
-  // Em produção, usar o domínio customizado do backend
-  const productionApiUrl = 'https://api.bloginfinitoautomatico.com';
-  
-  // Tentar usar variável de ambiente, mas sempre fallback para domínio customizado
-  const envBackendUrl = import.meta.env.VITE_BACKEND_URL;
-  const finalUrl = envBackendUrl ? envBackendUrl.replace(/\/$/, '') : productionApiUrl;
-  
+  const envBackendUrl = (import.meta.env.VITE_BACKEND_URL as string) || (import.meta.env.VITE_API_URL as string);
+  const sameOrigin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : '';
+
+  // Preferir variável de ambiente quando definida; caso contrário, usar o mesmo domínio do frontend
+  const finalUrl = (envBackendUrl ? envBackendUrl.replace(/\/$/, '') : (sameOrigin || 'http://127.0.0.1:8000'));
+
   // Log para debug
-  console.log('🔧 Ambiente detectado:', isDevelopment ? 'desenvolvimento' : 'produção');
-  console.log('🔧 Backend URL do .env:', envBackendUrl);
+  console.log('🔧 Backend URL (.env ou same-origin):', envBackendUrl || sameOrigin);
   console.log('🔧 API Base URL configurada:', finalUrl);
-  
+
   return finalUrl;
 }
 
