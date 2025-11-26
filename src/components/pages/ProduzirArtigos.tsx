@@ -2119,6 +2119,16 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
         api_response_keys: Object.keys(apiResponse)
       });
 
+      // 🔍 DEBUG: Verificar se CTA HTML está chegando do backend
+      if (apiResponse.article?.includes('bia-cta')) {
+        console.log('✅ CTA ENCONTRADO NA RESPOSTA DO BACKEND');
+        const ctaStart = apiResponse.article.indexOf('bia-cta');
+        const ctaSample = apiResponse.article.substring(Math.max(0, ctaStart - 100), ctaStart + 300);
+        console.log('📋 Amostra do CTA:', ctaSample);
+      } else {
+        console.warn('⚠️ CTA NÃO ENCONTRADO NA RESPOSTA DO BACKEND');
+      }
+
       // Progresso: Processando resultado (75%)
       setSingleProgress(prev => ({ ...prev, [ideaId]: 75 }));
 
@@ -2127,6 +2137,15 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
       // O conteúdo já vem formatado e processado do novo sistema unificado
       // ✅ IMPORTANTE: O CTA já é inserido pelo backend, não fazer duplicação aqui!
       let processedContent = sanitizeHtmlContent(apiResponse.article || '');
+      
+      // 🔍 DEBUG: Verificar conteúdo após sanitização
+      if (processedContent.includes('bia-cta')) {
+        console.log('✅ CTA ENCONTRADO APÓS SANITIZAÇÃO');
+      } else if (processedContent.includes('&lt;div class=')) {
+        console.log('⚠️ POSSÍVEL HTML ESCAPADO DETECTADO - CTA COM &lt; &gt;');
+        const escapedSample = processedContent.substring(0, 500);
+        console.log('📋 Amostra (primeiros 500 chars):', escapedSample);
+      }
       
       const articleData = {
         titulo: idea.titulo,
