@@ -3720,16 +3720,6 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
                   <XCircle className="h-4 w-4 mr-1" />
                   Limpar Seleção
                 </Button>
-
-                {/* 🔧 BOTÃO DE LIMPEZA FORÇADA PARA ARTIGOS ÓRFÃOS */}
-                <Button
-                  onClick={handleForceCleanup}
-                  className="px-3 py-2 bg-orange-500 text-white hover:bg-orange-600"
-                  title="Use apenas se um artigo ficar travado em 'PRODUZINDO'. Isso vai limpar todo o estado e recarregar a página."
-                >
-                  <AlertCircle className="h-4 w-4 mr-1" />
-                  🧹 Forçar Limpeza
-                </Button>
               </div>
             </div>
           )}
