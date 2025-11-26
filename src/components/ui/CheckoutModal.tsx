@@ -94,15 +94,27 @@ export function CheckoutModal({ isOpen, onClose, plan, userData, onSuccess }: Ch
   };
 
   const validateForm = () => {
-    if (!customerData.name || !customerData.email || !customerData.cpf_cnpj) {
-      toast.error('Por favor, preencha todos os campos obrigatórios');
+    if (!customerData.name || !customerData.name.trim()) {
+      toast.error('❌ Por favor, preencha o Nome Completo');
       return false;
     }
 
-    // Validar CPF
+    if (!customerData.email || !customerData.email.trim()) {
+      toast.error('❌ Por favor, preencha o E-mail');
+      return false;
+    }
+
+    // Validar CPF - OBRIGATÓRIO
     const cleanCPF = customerData.cpf_cnpj.replace(/\D/g, '');
+    if (!cleanCPF || cleanCPF.length < 11) {
+      toast.error('❌ CPF é obrigatório! Mínimo 11 dígitos.');
+      return false;
+    }
+    
     if (cleanCPF.length !== 11 || /^(\d)\1{10}$/.test(cleanCPF)) {
-      toast.error('CPF inválido');
+      toast.error('❌ CPF inválido. Verifique os dígitos.');
+      return false;
+    }
       return false;
     }
 
