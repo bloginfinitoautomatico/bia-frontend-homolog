@@ -987,6 +987,43 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
     console.log('🧹 Seleção limpa e progresso removido do localStorage');
   }, []);
 
+  // 🔧 FORÇAR LIMPEZA COMPLETA DE ESTADO ÓRFÃO
+  const handleForceCleanup = useCallback(async () => {
+    console.log('⚠️ Iniciando limpeza forçada de estado órfão...');
+    
+    // Limpar TODO estado de processamento
+    setProcessingSingle({});
+    setSingleProgress({});
+    setBatchProgress({});
+    setProcessingBatch(false);
+    setGlobalProcessingLock({});
+    setSelectedIdeaIds([]);
+    
+    // Limpar TODO localStorage relacionado
+    const keysToRemove = [
+      'bia_single_progress',
+      'bia_batch_progress',
+      'bia_processing_ideas',
+      'bia_batch_progress_state',
+      'bia_global_processing_lock'
+    ];
+    
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key);
+      console.log(`🗑️ Removido: ${key}`);
+    });
+    
+    // Mostrar confirmação
+    toast.success('✅ Limpeza forçada completada! Atualizando página em 1 segundo...', {
+      duration: 3000
+    });
+    
+    // Recarregar página para garantir estado limpo
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
+  }, []);
+
   // Verificar se todas as ideias da página atual estão selecionadas
   const allCurrentPageSelected = useMemo(() => {
     const currentPageIds = currentPageIdeas.map(idea => idea.id);
@@ -2537,8 +2574,6 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
     }
 
     setDeletingBatch(true);
-
-    // ✅ PRESERVAR IDs para processamento
     const idsToDelete = [...selectedIdeaIds];
     
     try {
@@ -2547,116 +2582,91 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
 
       console.log(`🗑️ Iniciando exclusão em massa de ${idsToDelete.length} ideias:`, idsToDelete);
 
-      // ✅ NOVA ABORDAGEM: Usar fetch diretamente para garantir sincronização
       const currentTime = new Date().toISOString();
       
-      // ✅ PROCESSAR TODAS AS IDEIAS EM PARALELO PARA MELHOR PERFORMANCE
-      const deletePromises = idsToDelete.map(async (ideaId) => {
+      // ✅ PROCESSAR CADA IDEIA SEQUENCIALMENTE para garantir sincronização
+      for (const ideaId of idsToDelete) {
         const idea = state.ideas.find(i => i.id === ideaId);
         if (!idea) {
-          console.error(`❌ Ideia ${ideaId} não encontrada no estado local`);
-          return { success: false, ideaId };
+          console.error(`❌ Ideia ${ideaId} não encontrada`);
+          errorCount++;
+          continue;
         }
 
-        console.log(`🗑️ Processando exclusão da ideia ${ideaId}: ${idea.titulo}`);
+        console.log(`🗑️ Processando exclusão ${successCount + errorCount + 1}/${idsToDelete.length}: ${idea.titulo}`);
         
         try {
-          // ✅ CHAMADA AO BACKEND
-          const response = await fetch(getApiUrl(`ideias/${ideaId}`), {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-            },
-            body: JSON.stringify({
-              status: 'excluido',
-              deleted_at: currentTime
-            })
-          });
-          
-          const result = await response.json();
-          
-          if (response.ok && result.success) {
-            console.log(`✅ Ideia ${ideaId} excluída com sucesso no backend`);
-            return { success: true, ideaId };
-          } else {
-            console.error(`❌ Falha no backend para ideia ${ideaId}:`, result);
-            return { success: false, ideaId };
-          }
-        } catch (apiError) {
-          console.error(`❌ Erro na API para ideia ${ideaId}:`, apiError);
-          return { success: false, ideaId };
-        }
-      });
-
-      // ✅ AGUARDAR TODAS AS EXCLUSÕES COMPLETAREM
-      const results = await Promise.all(deletePromises);
-      
-      // ✅ ATUALIZAR ESTADO LOCAL APENAS PARA AS QUE TIVERAM SUCESSO NO BACKEND
-      results.forEach(({ success, ideaId }) => {
-        if (success) {
-          actions.updateIdea(ideaId, {
+          // ✅ ATUALIZAR NO CONTEXTO LOCAL (usa actions que sincroniza com backend)
+          const success = actions.updateIdea(ideaId, { 
             status: 'excluido' as const,
             deletedDate: currentTime
           });
-          successCount++;
-        } else {
+          
+          if (success) {
+            console.log(`✅ Ideia ${ideaId} marcada como excluída`);
+            successCount++;
+          } else {
+            console.error(`❌ Falha ao atualizar ideia ${ideaId}`);
+            errorCount++;
+          }
+          
+          // ✅ PEQUENO DELAY entre operações para evitar race conditions
+          await new Promise(resolve => setTimeout(resolve, 50));
+          
+        } catch (error) {
+          console.error(`❌ Erro ao excluir ideia ${ideaId}:`, error);
           errorCount++;
         }
-      });
-
-      // ✅ LIMPAR SELEÇÃO APÓS TODAS AS OPERAÇÕES
-      setSelectedIdeaIds([]);
-
-      // ✅ FORÇAR RE-SINCRONIZAÇÃO COMPLETA
-      console.log('🔄 Forçando re-sincronização completa após exclusão em massa...');
-      await actions.loadFromDatabase();
-      
-      // ✅ AGUARDAR QUE OS DADOS SEJAM COMPLETAMENTE CARREGADOS
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // ✅ MÚLTIPLOS REFRESHES para garantir atualização visual
-      console.log('🔄 Aplicando refreshes múltiplos para garantir atualização da interface...');
-      setRefreshKey(prev => prev + 1);
-      await new Promise(resolve => setTimeout(resolve, 100));
-      setRefreshKey(prev => prev + 1);
-      await new Promise(resolve => setTimeout(resolve, 100));
-      setRefreshKey(prev => prev + 1);
-      
-      // ✅ FILTRAR MANUALMENTE as ideias excluídas do estado atual (fallback)
-      const currentIdeasBeforeFilter = state.ideas.length;
-      const currentIdeasAfterFilter = state.ideas.filter(idea => idea.status !== 'excluido').length;
-      console.log(`📊 Ideias no estado: ${currentIdeasBeforeFilter} total, ${currentIdeasAfterFilter} não-excluídas`);
-      
-      // ✅ SE AINDA HOUVER IDEIAS EXCLUÍDAS VISÍVEIS, FORÇA LIMPEZA MANUAL
-      if (currentIdeasBeforeFilter > currentIdeasAfterFilter) {
-        console.log('🧹 Forçando limpeza manual de ideias excluídas do estado local...');
-        const cleanedIdeas = state.ideas.filter(idea => idea.status !== 'excluido');
-        actions.updateAllIdeas(cleanedIdeas);
-        setRefreshKey(prev => prev + 1);
       }
+
+      console.log(`✅ Processamento individual concluído: ${successCount} sucessos, ${errorCount} erros`);
+
+      // ✅ LIMPAR SELEÇÃO IMEDIATAMENTE
+      setSelectedIdeaIds([]);
+      
+      // ✅ AGUARDAR sincronização com backend
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // ✅ RE-SINCRONIZAR dados completos com backend
+      console.log('🔄 Re-sincronizando dados com backend...');
+      try {
+        await actions.loadFromDatabase();
+        console.log('✅ Dados re-sincronizados com sucesso');
+      } catch (error) {
+        console.warn('⚠️ Erro na re-sincronização:', error);
+      }
+      
+      // ✅ FORÇAR MÚLTIPLOS REFRESHES para garantir atualização visual
+      console.log('🔄 Atualizando interface...');
+      setRefreshKey(prev => prev + 1);
+      await new Promise(resolve => setTimeout(resolve, 100));
+      setRefreshKey(prev => prev + 1);
+      await new Promise(resolve => setTimeout(resolve, 100));
+      setRefreshKey(prev => prev + 1);
 
       // Feedback para o usuário
       if (successCount > 0 && errorCount === 0) {
         toast.success(`✅ ${successCount} ideia(s) movida(s) para "Excluídos" com sucesso!`, {
-          description: 'Lista atualizada automaticamente'
+          description: 'Página será atualizada automaticamente'
         });
-        console.log(`📊 Exclusão em massa concluída: ${successCount} ideias excluídas`);
+        console.log(`📊 Exclusão em massa bem-sucedida: ${successCount} ideias`);
       } else if (successCount > 0 && errorCount > 0) {
-        toast.warning(`Exclusão parcial: ${successCount} sucessos, ${errorCount} erros`);
-        console.log(`📊 Exclusão em massa parcial: ${successCount} sucessos, ${errorCount} erros`);
+        toast.warning(`⚠️ ${successCount} movidas com sucesso, ${errorCount} com erro`, {
+          description: 'Atualize a página se necessário'
+        });
+        console.log(`📊 Exclusão parcial: ${successCount} sucessos, ${errorCount} erros`);
       } else {
-        toast.error(`❌ Falha na exclusão em massa: ${errorCount} erros`);
-        console.log(`📊 Exclusão em massa falhou: ${errorCount} erros`);
+        toast.error(`❌ Nenhuma ideia foi excluída (${errorCount} erros)`);
+        console.log(`📊 Exclusão falhou completamente`);
       }
 
     } catch (error) {
       console.error('❌ Erro crítico na exclusão em massa:', error);
-      toast.error('Erro crítico na exclusão em massa');
+      toast.error('Erro crítico na exclusão em massa. Tente novamente.');
     } finally {
       setDeletingBatch(false);
     }
-  }, [selectedIdeaIds, actions, state.ideas]);
+  }, [selectedIdeaIds, state.ideas, actions]);
 
   // FUNÇÃO PARA ABRIR EDIÇÃO DE IDEIA
   const handleOpenEditDialog = useCallback((ideaId: number) => {
@@ -3550,6 +3560,16 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
                 >
                   <XCircle className="h-4 w-4 mr-1" />
                   Limpar Seleção
+                </Button>
+
+                {/* 🔧 BOTÃO DE LIMPEZA FORÇADA PARA ARTIGOS ÓRFÃOS */}
+                <Button
+                  onClick={handleForceCleanup}
+                  className="px-3 py-2 bg-orange-500 text-white hover:bg-orange-600"
+                  title="Use apenas se um artigo ficar travado em 'PRODUZINDO'. Isso vai limpar todo o estado e recarregar a página."
+                >
+                  <AlertCircle className="h-4 w-4 mr-1" />
+                  🧹 Forçar Limpeza
                 </Button>
               </div>
             </div>
