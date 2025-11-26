@@ -2788,6 +2788,12 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
           description: 'Página será atualizada automaticamente'
         });
         console.log(`📊 Exclusão em massa bem-sucedida: ${successCount} ideias`);
+        
+        // ✅ HARD REFRESH AUTOMÁTICO após sucesso total
+        console.log('🔄 Realizando hard refresh automático em 1.5s...');
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        window.location.reload();
+        return;
       } else if (successCount > 0 && errorCount > 0) {
         toast.warning(`⚠️ ${successCount} movidas com sucesso, ${errorCount} com erro`, {
           description: 'Atualize a página se necessário'
