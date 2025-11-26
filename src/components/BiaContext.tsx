@@ -1849,11 +1849,24 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
             }
 
             if (!backendSiteId) {
-              console.warn(`⚠️ Ignorando ideia "${ideaData.titulo}" - site_id inválido ou não encontrado`);
-              continue; // Pular esta ideia
+              console.error(`❌ CRÍTICO: site_id inválido para "${ideaData.titulo}"`, {
+                siteIdOriginal: ideaData.siteId,
+                sitesDisponiveis: state.sites.length,
+                primeiroSite: state.sites[0] ? { id: state.sites[0].id, uuid: state.sites[0].uuid, nome: state.sites[0].nome } : 'nenhum'
+              });
+              // NÃO pular - criar localmente como fallback
+              const fallbackIdea: Idea = {
+                ...ideaData,
+                id: Date.now() + Math.random(),
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              };
+              savedIdeas.push(fallbackIdea);
+              console.warn(`⚠️ Ideia "${ideaData.titulo}" criada APENAS localmente (fallback)`);
+              continue;
             }
 
-            console.log(`💾 Criando ideia no backend...`, { titulo: ideaData.titulo, site_id: backendSiteId });
+            console.log(`💾 Enviando ideia para backend...`, { titulo: ideaData.titulo, site_id: backendSiteId });
 
             const result = await apiService.createIdeia({
               titulo: ideaData.titulo,
@@ -1866,6 +1879,8 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
               generation_params: ideaData.generationParams ? JSON.stringify(ideaData.generationParams) : null,
               wordpress_data: ideaData.wordpressData ? JSON.stringify(ideaData.wordpressData) : null,
             });
+
+            console.log(`📡 Resposta do backend para "${ideaData.titulo}":`, { success: result.success, hasData: !!result.data, error: result.error });
 
             if (result.success && result.data) {
               // Converter resposta do backend para formato frontend
@@ -1889,9 +1904,13 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
               };
               
               savedIdeas.push(savedIdea);
-              console.log(`✅ Ideia "${savedIdea.titulo}" salva no backend (ID: ${savedIdea.id})`);
+              console.log(`✅ Ideia "${savedIdea.titulo}" PERSISTIDA NO BACKEND com sucesso (ID: ${savedIdea.id})`);
             } else {
-              console.error('❌ Falha ao salvar ideia:', result.error);
+              console.error(`❌ FALHA ao persistir "${ideaData.titulo}" no backend:`, {
+                error: result.error,
+                site_id_enviado: backendSiteId,
+                response: result
+              });
               // Criar ideia local como fallback
               const fallbackIdea: Idea = {
                 ...ideaData,
@@ -1900,9 +1919,14 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
                 updatedAt: new Date().toISOString(),
               };
               savedIdeas.push(fallbackIdea);
+              console.warn(`⚠️ Ideia "${fallbackIdea.titulo}" criada APENAS localmente (fallback após erro)`);
             }
-          } catch (error) {
-            console.error('❌ Erro ao salvar ideia individual:', error);
+          } catch (error: any) {
+            console.error(`❌ EXCEÇÃO ao salvar "${ideaData.titulo}":`, {
+              message: error.message,
+              stack: error.stack?.split('\n').slice(0, 3),
+              site_id: backendSiteId
+            });
             // Criar ideia local como fallback
             const fallbackIdea: Idea = {
               ...ideaData,
@@ -1911,6 +1935,7 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
               updatedAt: new Date().toISOString(),
             };
             savedIdeas.push(fallbackIdea);
+            console.warn(`⚠️ Ideia "${fallbackIdea.titulo}" criada APENAS localmente (fallback após exceção)`);
           }
         }
 
@@ -1919,7 +1944,15 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
         dispatch({ type: 'SET_IDEAS', payload: nextIdeas });
         persistImmediately({ ideas: nextIdeas });
         
-        console.log(`✅ ${savedIdeas.length} ideias processadas e adicionadas ao estado`);
+        const persistedCount = savedIdeas.filter(i => typeof i.id === 'string' && /^[0-9a-fA-F]{8}/.test(String(i.id))).length;
+        const localOnlyCount = savedIdeas.length - persistedCount;
+        
+        console.log(`✅ ${savedIdeas.length} ideias processadas:`, {
+          persistidasBackend: persistedCount,
+          apenasLocais: localOnlyCount,
+          totalNoEstado: nextIdeas.length
+        });
+        
         return savedIdeas.length > 0;
       } catch (error) {
         console.error('❌ Erro geral ao adicionar ideias:', error);
