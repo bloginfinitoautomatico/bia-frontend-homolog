@@ -327,14 +327,16 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
   // ✅ NOVO: Limpar estado de processamento se artigo já foi criado
   useEffect(() => {
     // Verificar se há alguma ideia em estado de processamento que já tem artigo
-    Object.keys(processingSingle).forEach(ideaIdStr => {
-      const ideaId = parseInt(ideaIdStr);
-      
+    const processingIds = Object.keys(processingSingle).map(id => parseInt(id));
+    let hasChanges = false;
+
+    processingIds.forEach(ideaId => {
       // Verificar se este artigo já existe
       const article = state.articles.find(a => a.ideaId === ideaId);
       
       if (article && processingSingle[ideaId]) {
         console.log(`✅ Artigo ${ideaId} já criado - limpando estado de processamento`);
+        hasChanges = true;
         
         // Limpar estado de processamento e progresso
         setProcessingSingle(prev => {
@@ -356,7 +358,63 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
         });
       }
     });
+
+    // Se não há mais processamentos ativos, limpar localStorage
+    if (hasChanges && Object.keys(processingSingle).length === 1) {
+      console.log('🧹 Nenhum processamento ativo - limpando localStorage');
+      setTimeout(() => {
+        localStorage.removeItem('bia_single_progress');
+        localStorage.removeItem('bia_batch_progress');
+      }, 500);
+    }
   }, [state.articles, processingSingle]);
+
+  // ✅ NOVO: Limpeza agressiva no mount - detectar e limpar artigos órfãos
+  useEffect(() => {
+    console.log('🔍 Verificando artigos órfãos no carregamento da página...');
+    
+    // Após 1 segundo (tempo para o estado ser carregado), verificar
+    const timeoutId = setTimeout(() => {
+      // Verificar se há artigos que estão marcados como "produzindo" mas já foram criados
+      const processingIds = Object.keys(processingSingle).map(id => parseInt(id));
+      
+      processingIds.forEach(ideaId => {
+        const idea = state.ideas.find(i => i.id === ideaId);
+        const article = state.articles.find(a => a.ideaId === ideaId);
+        
+        if (article && !idea?.status?.includes('produzindo')) {
+          console.log(`🚨 DETECTADO ARTIGO ÓRFÃO: Ideia ${ideaId} tem artigo mas ainda está em processingSingle`);
+          console.log('   Limpando agora...');
+          
+          // Forçar limpeza imediata
+          setProcessingSingle(prev => {
+            const newState = { ...prev };
+            delete newState[ideaId];
+            return newState;
+          });
+          
+          setSingleProgress(prev => {
+            const newState = { ...prev };
+            delete newState[ideaId];
+            return newState;
+          });
+          
+          setGlobalProcessingLock(prev => {
+            const newState = { ...prev };
+            delete newState[ideaId];
+            return newState;
+          });
+          
+          // Limpar localStorage também
+          localStorage.removeItem('bia_processing_ideas');
+          localStorage.removeItem('bia_single_progress');
+          localStorage.removeItem('bia_batch_progress');
+        }
+      });
+    }, 1000);
+    
+    return () => clearTimeout(timeoutId);
+  }, []); // Executa apenas uma vez no mount
 
   // Timer para controlar o botão de cancelar
   useEffect(() => {
