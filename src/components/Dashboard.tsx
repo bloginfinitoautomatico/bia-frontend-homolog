@@ -423,7 +423,7 @@ export function Dashboard({ userData, onNavigate, onUpdateUser, onRefreshUser }:
       // 2. Refresh user data via specific endpoint
       const token = localStorage.getItem('auth_token');
       if (token) {
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'}/api/auth/user/refresh`, {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://api.bloginfinitoautomatico.com'}/api/auth/user/refresh`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,

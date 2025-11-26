@@ -451,12 +451,9 @@ class ApiService {
     }
   }
 
-  async deleteSite(id: number): Promise<{ success: boolean; error?: string }> {
+  async deleteSite(id: number | string): Promise<{ success: boolean; error?: string }> {
     try {
-      // Usar UUID do backend quando disponível
-      const targetSite = state.sites.find(s => s.id === id);
-      const backendId = (targetSite && targetSite.uuid) ? targetSite.uuid : id;
-
+      const backendId = String(id);
       const result = await this.makeRequest(`/sites/${backendId}`, {
         method: 'DELETE',
       });
@@ -1749,7 +1746,9 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
         const isOnline = await apiService.testConnection();
         
         if (isOnline) {
-          const result = await apiService.deleteSite(id);
+          const targetSite = state.sites.find(s => String(s.id) === String(id) || s.uuid === String(id));
+          const backendId = targetSite?.uuid ? targetSite.uuid : String(id);
+          const result = await apiService.deleteSite(backendId);
           
           if (result.success) {
             dispatch({ type: 'DELETE_SITE', payload: id });
@@ -1768,7 +1767,7 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
               errMsg.includes('access denied') ||
               errMsg.includes('not authorized')
             ) {
-              const nextSites = state.sites.filter(s => String(s.id) !== String(id));
+              const nextSites = state.sites.filter(s => String(s.id) !== String(id) && s.uuid !== String(id));
               dispatch({ type: 'SET_SITES', payload: nextSites });
               persistImmediately({ sites: nextSites });
               toast.success('Site removido localmente (já não existia no servidor).');
@@ -1778,7 +1777,7 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
           }
         } else {
           // Remover localmente (offline)
-          const nextSites = state.sites.filter(s => s.id !== id);
+          const nextSites = state.sites.filter(s => String(s.id) !== String(id) && s.uuid !== String(id));
           dispatch({ type: 'SET_SITES', payload: nextSites });
           persistImmediately({ sites: nextSites });
           toast.warning('Site removido localmente (offline).');

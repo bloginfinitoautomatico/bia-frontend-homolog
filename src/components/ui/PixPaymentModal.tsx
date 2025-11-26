@@ -211,7 +211,7 @@ export function PixPaymentModal({
       try {
         const token = localStorage.getItem('auth_token');
         // Usar o endpoint correto conforme definido no backend
-        const response = await fetch(`http://localhost:8000/api/payments/${paymentData.id}/status`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.bloginfinitoautomatico.com'}/api/payments/${paymentData.id}/status`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Accept': 'application/json'
@@ -266,7 +266,7 @@ export function PixPaymentModal({
         isSubscription: paymentData.isSubscription
       });
       
-      const response = await fetch(`http://localhost:8000/api/payments/${paymentIdToCheck}/status`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://api.bloginfinitoautomatico.com'}/api/payments/${paymentIdToCheck}/status`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Accept': 'application/json'
@@ -482,9 +482,9 @@ export function PixPaymentModal({
                                 
                                 let endpoint: string;
                                 if (paymentData.isSubscription && paymentData.subscriptionId) {
-                                  endpoint = `http://localhost:8000/api/subscriptions/${paymentData.subscriptionId}/pix`;
+                                  endpoint = `${import.meta.env.VITE_API_URL || 'https://api.bloginfinitoautomatico.com'}/api/subscriptions/${paymentData.subscriptionId}/pix`;
                                 } else {
-                                  endpoint = `http://localhost:8000/api/subscriptions/payment/${paymentData.id}/pix-code`;
+                                  endpoint = `${import.meta.env.VITE_API_URL || 'https://api.bloginfinitoautomatico.com'}/api/subscriptions/payment/${paymentData.id}/pix-code`;
                                 }
 
                                 const response = await fetch(endpoint, {
