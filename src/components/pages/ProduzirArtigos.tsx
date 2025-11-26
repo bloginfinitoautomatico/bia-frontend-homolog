@@ -124,7 +124,42 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
     });
   }, []);
   
-  const [singleProgress, setSingleProgress] = useState<Record<number, number>>({});
+  // ✅ NOVO: Estados para progresso com persistência no localStorage
+  const [singleProgress, setSingleProgressState] = useState<Record<number, number>>(() => {
+    try {
+      const saved = localStorage.getItem('bia_single_progress');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+  
+  const setSingleProgress = useCallback((updater: Record<number, number> | ((prev: Record<number, number>) => Record<number, number>)) => {
+    setSingleProgressState(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      localStorage.setItem('bia_single_progress', JSON.stringify(next));
+      return next;
+    });
+  }, []);
+  
+  // ✅ NOVO: Estados para batch progress com persistência no localStorage
+  const [batchProgress, setBatchProgressState] = useState<{ [key: number]: number }>(() => {
+    try {
+      const saved = localStorage.getItem('bia_batch_progress');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+  
+  const setBatchProgress = useCallback((updater: Record<number, number> | ((prev: Record<number, number>) => Record<number, number>)) => {
+    setBatchProgressState(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      localStorage.setItem('bia_batch_progress', JSON.stringify(next));
+      return next;
+    });
+  }, []);
+  
   const [publishingSingle, setPublishingSingle] = useState<Record<number, boolean>>({});
   
   // ✅ LOCK GLOBAL: Prevenir múltiplas execuções da mesma ideia
@@ -136,7 +171,6 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
   const [processingBatch, setProcessingBatch] = useState(false);
   const [publishingBatch, setPublishingBatch] = useState(false);
   const [deletingBatch, setDeletingBatch] = useState(false);
-  const [batchProgress, setBatchProgress] = useState<{ [key: number]: number }>({});
 
   // Dados reais do dashboard (seguindo padrão das outras páginas)
   const { user, limits: realPlanLimits, usage } = dashboardData || {};
@@ -360,6 +394,9 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
     localStorage.removeItem(currentItemKey);
     localStorage.removeItem(totalItemsKey);
     localStorage.removeItem(startTimeKey);
+    // ✅ NOVO: Limpar progresso do localStorage
+    localStorage.removeItem('bia_single_progress');
+    localStorage.removeItem('bia_batch_progress');
     
     setIsBatchPersistent(false);
     setProcessingBatch(false);
@@ -368,7 +405,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
     setBatchStartTime(0);
     setShowCancelButton(false);
     setBatchTimer(0);
-    console.log('🧹 Estado persistente do batch limpo para usuário:', currentUser?.id || userData?.id);
+    console.log('🧹 Estado persistente do batch e progresso limpo para usuário:', currentUser?.id || userData?.id);
   }, [getUserSpecificKey, currentUser?.id, userData?.id]);
 
   // Função para cancelar produção em massa
@@ -540,6 +577,26 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
       };
     }
   }, [clearBatchPersistentState, processingBatch, isBatchPersistent, batchCurrentItem, batchTotalItems, showCancelButton, getUserSpecificKey, currentUser?.id, userData?.id]);
+
+  // ✅ NOVO: Cleanup ao desmontar - limpeza inteligente de localStorage
+  useEffect(() => {
+    return () => {
+      // Quando o componente desmontar, limpar progresso SE não há processamento em andamento
+      if (!processingBatch && !isBatchPersistent) {
+        // Apenas limpar se não há processamento ativo
+        const processingKey = getUserSpecificKey('processing');
+        const isStillProcessing = localStorage.getItem(processingKey) === 'true';
+        
+        if (!isStillProcessing) {
+          localStorage.removeItem('bia_single_progress');
+          localStorage.removeItem('bia_batch_progress');
+          console.log('🧹 Progresso limpo ao desmontar componente (sem processamento ativo)');
+        } else {
+          console.log('⏳ Mantendo progresso no localStorage - processamento em andamento');
+        }
+      }
+    };
+  }, [processingBatch, isBatchPersistent, getUserSpecificKey]);
 
   // Verificar limites do plano
   const limits = actions.checkFreePlanLimits();
@@ -832,7 +889,10 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
     setSelectedIdeaIds([]);
     setBatchProgress({});
     setSingleProgress({});
-    console.log('🧹 Seleção limpa');
+    // ✅ NOVO: Limpar localStorage do progresso
+    localStorage.removeItem('bia_single_progress');
+    localStorage.removeItem('bia_batch_progress');
+    console.log('🧹 Seleção limpa e progresso removido do localStorage');
   }, []);
 
   // Verificar se todas as ideias da página atual estão selecionadas
@@ -3583,21 +3643,33 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
                         {/* Barra de loading estreita na parte inferior */}
                         {(isProcessing || (processingBatch && batchItemProgress !== undefined)) && (
                           <div className="mt-2">
-                            <div className="flex justify-between text-xs text-purple-600 mb-1">
-                              <span>
-                                {publishingBatch ? 'Publicando no WordPress...' : processingBatch ? 'Produção em massa...' : 'Produzindo artigo...'}
-                              </span>
-                              <span>{(batchItemProgress || progress) === -1 ? 'Erro' : `${batchItemProgress || progress}%`}</span>
-                            </div>
-                            <div className="w-full h-2 bg-purple-100 rounded-full overflow-hidden">
-                              <div 
-                                className="h-full transition-all duration-300 ease-out rounded-full"
-                                style={{ 
-                                  width: `${(batchItemProgress || progress) === -1 ? 100 : (batchItemProgress || progress)}%`,
-                                  backgroundColor: (batchItemProgress || progress) === -1 ? '#ef4444' : '#8c52ff'
-                                }}
-                              />
-                            </div>
+                            {/* ✅ CORRIGIDO: Garantir que o valor de progresso é sempre um número válido (0-100 ou -1) */}
+                            {(() => {
+                              const progressValue = batchItemProgress !== undefined ? batchItemProgress : progress;
+                              const validProgress = typeof progressValue === 'number' ? progressValue : 0;
+                              const isError = validProgress === -1;
+                              const displayPercent = isError ? 100 : Math.max(0, Math.min(100, validProgress));
+                              
+                              return (
+                                <>
+                                  <div className="flex justify-between text-xs text-purple-600 mb-1">
+                                    <span>
+                                      {publishingBatch ? 'Publicando no WordPress...' : processingBatch ? 'Produção em massa...' : 'Produzindo artigo...'}
+                                    </span>
+                                    <span>{isError ? 'Erro' : `${displayPercent}%`}</span>
+                                  </div>
+                                  <div className="w-full h-2 bg-purple-100 rounded-full overflow-hidden">
+                                    <div 
+                                      className="h-full transition-all duration-300 ease-out rounded-full"
+                                      style={{ 
+                                        width: `${displayPercent}%`,
+                                        backgroundColor: isError ? '#ef4444' : '#8c52ff'
+                                      }}
+                                    />
+                                  </div>
+                                </>
+                              );
+                            })()}
                           </div>
                         )}
                       </div>
