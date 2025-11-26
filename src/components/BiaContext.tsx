@@ -33,6 +33,7 @@ declare global {
 // =======================
 interface Site {
   id: number;
+    uuid?: string; // UUID do backend (usado para foreign keys nas APIs)
   user_id?: number;
   user?: {
     id: string;
@@ -369,8 +370,9 @@ class ApiService {
         const sitesArray = Array.isArray(result.data) ? result.data : result.data.data || [];
         
         // Converter resposta do backend para formato frontend
-        const sites: Site[] = sitesArray.map((item: any) => ({
-          id: item.id,
+        const sites: Site[] = sitesArray.map((item: any, index: number) => ({
+          id: index + 1, // ID numérico sequencial para compatibilidade local
+          uuid: item.id, // Preservar UUID do backend
           user_id: item.user_id,
           user: item.user, // Incluir dados do usuário proprietário (para admins)
           nome: item.nome,
@@ -1627,8 +1629,28 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
           const result = await apiService.createSite(siteData);
           
           if (result.success && result.data) {
-            dispatch({ type: 'ADD_SITE', payload: result.data });
-            persistImmediately({ sites: [...state.sites, result.data] });
+            const backendSite = result.data as any;
+            const mappedSite: Site = {
+              id: state.sites.length + 1,
+              uuid: backendSite.id,
+              user_id: backendSite.user_id,
+              user: backendSite.user,
+              nome: backendSite.nome,
+              url: backendSite.url,
+              descricao: backendSite.descricao || '',
+              categoria: backendSite.categoria || '',
+              nicho: backendSite.nicho || '',
+              status: backendSite.status || 'ativo',
+              wordpressUrl: backendSite.wordpress_url,
+              wordpressUsername: backendSite.wordpress_username,
+              wordpressPassword: backendSite.wordpress_password,
+              wordpressData: backendSite.wordpress_data,
+              createdAt: backendSite.created_at || new Date().toISOString(),
+              updatedAt: backendSite.updated_at || new Date().toISOString(),
+            };
+
+            dispatch({ type: 'ADD_SITE', payload: mappedSite });
+            persistImmediately({ sites: [...state.sites, mappedSite] });
             toast.success('Site conectado com sucesso!');
             console.log('✅ Site criado no backend:', result.data);
             return true;
