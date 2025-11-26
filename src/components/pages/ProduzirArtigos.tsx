@@ -2874,28 +2874,39 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
       // Limpar seleção e mostrar resultado
       setSelectedIdeaIds([]);
       
-      // Forçar re-renderização da interface para aplicar filtros e atualizar listas
+      // ✅ RE-SINCRONIZAR dados com backend após publicação em massa
       if (successCount > 0) {
+        console.log('🔄 Re-sincronizando dados com backend após publicação em massa...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        try {
+          await actions.loadFromDatabase();
+          console.log('✅ Dados re-sincronizados com sucesso');
+        } catch (error) {
+          console.warn('⚠️ Erro na re-sincronização:', error);
+        }
+      }
+      
+      // Forçar múltiplos re-renders da interface para garantir atualização completa
+      if (successCount > 0) {
+        console.log('🔄 Atualizando interface com múltiplos refreshes...');
         setRefreshKey(prev => prev + 1);
-        console.log('🔄 Interface atualizada após publicação em massa para aplicar filtros');
+        await new Promise(resolve => setTimeout(resolve, 100));
+        setRefreshKey(prev => prev + 1);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        setRefreshKey(prev => prev + 1);
       }
       
       if (successCount > 0 && errorCount === 0) {
-        toast.success(`🎉 Publicação em massa concluída! ${successCount} artigos publicados com sucesso.`);
+        toast.success(`🎉 Publicação em massa concluída! ${successCount} artigos publicados com sucesso.`, {
+          description: 'Página será atualizada automaticamente'
+        });
       } else if (successCount > 0 && errorCount > 0) {
-        toast.warning(`Publicação parcial: ${successCount} sucessos, ${errorCount} erros. Verifique os artigos individualmente.`);
+        toast.warning(`⚠️ ${successCount} publicados com sucesso, ${errorCount} com erro`, {
+          description: 'Verifique os artigos individualmente'
+        });
       } else {
-        toast.error(`❌ Falha na publicação em massa. ${errorCount} erros ocorreram.`);
+        toast.error(`❌ Nenhum artigo foi publicado (${errorCount} erros)`);
       }
-
-      // Não chamar onRefreshUser para preservar o estado local atualizado pelo consumo de crédito
-      // if (successCount > 0 && onRefreshUser) {
-      //   console.log('🔄 Forçando atualização dos dados após publicação em massa...');
-      //   setTimeout(async () => {
-      //     await onRefreshUser();
-      //     console.log('✅ Dados atualizados após publicação em massa');
-      //   }, 2000);
-      // }
 
       // Limpar progresso após alguns segundos
       setTimeout(() => {
