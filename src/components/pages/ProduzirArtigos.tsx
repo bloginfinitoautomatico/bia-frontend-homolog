@@ -2431,6 +2431,18 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
       // Limpar seleção
       setSelectedIdeaIds([]);
       
+      // ✅ RE-SINCRONIZAR dados com backend após produção em massa
+      if (successCount > 0) {
+        console.log('🔄 Re-sincronizando dados com backend após produção em massa...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        try {
+          await actions.loadFromDatabase();
+          console.log('✅ Dados re-sincronizados com sucesso');
+        } catch (error) {
+          console.warn('⚠️ Erro na re-sincronização:', error);
+        }
+      }
+      
       // ✅ O BACKEND JÁ CONSUMIU OS CRÉDITOS AUTOMATICAMENTE (1 por artigo)
       if (successCount > 0) {
         console.log(`💳 Backend já consumiu ${successCount} créditos automaticamente via ArtigoObserver`);
@@ -2448,20 +2460,27 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
         console.log(`✅ ${successCount} artigos produzidos - sincronização automática ativa`);
       }
       
-      // Forçar re-renderização da interface para atualizar contadores
+      // ✅ FORÇAR MÚLTIPLOS REFRESHES para garantir atualização visual completa
+      console.log('🔄 Atualizando interface com múltiplos refreshes...');
+      setRefreshKey(prev => prev + 1);
+      await new Promise(resolve => setTimeout(resolve, 100));
+      setRefreshKey(prev => prev + 1);
+      await new Promise(resolve => setTimeout(resolve, 100));
       setRefreshKey(prev => prev + 1);
       
       // Mostrar resultado sem cálculos locais de saldo
       if (successCount > 0 && errorCount === 0) {
         toast.success(`🎉 Produção em massa concluída! ${successCount} artigos produzidos com sucesso.`, {
-          duration: 6000
+          duration: 6000,
+          description: 'Página será atualizada automaticamente'
         });
       } else if (successCount > 0 && errorCount > 0) {
-        toast.warning(`Produção parcial: ${successCount} sucessos, ${errorCount} erros.`, {
-          duration: 6000
+        toast.warning(`⚠️ ${successCount} artigos produzidos, ${errorCount} com erro`, {
+          duration: 6000,
+          description: 'Atualize a página se necessário'
         });
       } else {
-        toast.error(`❌ Falha na produção em massa. ${errorCount} erros ocorreram.`);
+        toast.error(`❌ Nenhum artigo foi produzido (${errorCount} erros)`);
       }
 
       // Limpar progresso após alguns segundos
