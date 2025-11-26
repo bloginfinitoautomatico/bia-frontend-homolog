@@ -79,8 +79,13 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
         });
         
         if (result.success && result.data) {
-          setPlansData(result.data);
-          console.log('✅ Planos carregados com sucesso:', result.data);
+          // Ordenar planos mensais por preço
+          const sortedData = {
+            ...result.data,
+            monthly: result.data.monthly?.sort((a: any, b: any) => parseFloat(a.price) - parseFloat(b.price)) || []
+          };
+          setPlansData(sortedData);
+          console.log('✅ Planos carregados com sucesso:', sortedData);
           
           // Disparar evento Meta Pixel - ViewContent (visualização de planos)
           const planSlugs = [
