@@ -2030,21 +2030,20 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
 
     deleteIdea: (id: number) => {
       try {
-        // Em vez de remover, marcar como excluído para evitar que retorne na lista
+        // Remover completamente a ideia excluída do estado local
         const ideaToDelete = state.ideas.find(i => i.id === id);
         if (!ideaToDelete) {
           console.warn(`⚠️ Ideia ${id} não encontrada para exclusão`);
           return false;
         }
 
-        const nextIdeas = state.ideas.map(idea => 
-          idea.id === id ? { ...idea, status: 'excluido' as const } : idea
-        );
+        // Filtrar removendo a ideia do array
+        const nextIdeas = state.ideas.filter(idea => idea.id !== id);
         
         dispatch({ type: 'SET_IDEAS', payload: nextIdeas });
         persistImmediately({ ideas: nextIdeas });
         
-        console.log(`✅ Ideia ${id} marcada como Excluída`);
+        console.log(`✅ Ideia ${id} removida do estado local`);
         return true;
       } catch (error) {
         console.error('❌ Erro ao deletar ideia:', error);

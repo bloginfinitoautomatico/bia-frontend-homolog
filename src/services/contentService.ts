@@ -245,7 +245,7 @@ Este artigo é para um blog no nicho de "${params.nicho}" e deve focar nas segui
 5. Cite ao menos 8 a 12 vezes as palavras-chave: ${params.palavrasChave}
 6. NÃO seja literal ao seguir estruturas robóticas, seja criativo e persuasivo
 7. NÃO use placeholders, o texto será publicado sem revisão
-8. NÃO comece ou termine falando 'segue o conteúdo solicitado'
+8. NÃO comece ou termine falando 'segue o conteúdo solicitado'${ctaSection}
 
 ### ESTRUTURA OBRIGATÓRIA (2000-3500 palavras):
 

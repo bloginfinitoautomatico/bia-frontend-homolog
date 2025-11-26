@@ -106,8 +106,24 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
     details?: string;
   }>({ checked: false, hasKey: false, isValid: false });
   
-  // Estados para operações individuais com progresso
-  const [processingSingle, setProcessingSingle] = useState<Record<number, boolean>>({});
+  // Estados para operações individuais com progresso - PERSISTIDOS NO LOCALSTORAGE
+  const [processingSingle, setProcessingSingleState] = useState<Record<number, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('bia_processing_ideas');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+  
+  const setProcessingSingle = useCallback((updater: Record<number, boolean> | ((prev: Record<number, boolean>) => Record<number, boolean>)) => {
+    setProcessingSingleState(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      localStorage.setItem('bia_processing_ideas', JSON.stringify(next));
+      return next;
+    });
+  }, []);
+  
   const [singleProgress, setSingleProgress] = useState<Record<number, number>>({});
   const [publishingSingle, setPublishingSingle] = useState<Record<number, boolean>>({});
   
@@ -1625,6 +1641,17 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
             delete newState[ideaId];
             return newState;
           });
+          // ✅ LIMPAR STATUS DE PROCESSAMENTO DO LOCALSTORAGE
+          setProcessingSingle(prev => {
+            const newState = { ...prev };
+            delete newState[ideaId];
+            return newState;
+          });
+          setGlobalProcessingLock(prev => {
+            const newState = { ...prev };
+            delete newState[ideaId];
+            return newState;
+          });
         }, 2000);
       } else {
         setSingleProgress(prev => ({ ...prev, [ideaId]: -1 }));
@@ -2346,50 +2373,60 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
       // ✅ NOVA ABORDAGEM: Usar fetch diretamente para garantir sincronização
       const currentTime = new Date().toISOString();
       
-      // ✅ PROCESSAR TODAS AS IDEIAS COM CHAMADAS SÍNCRONAS AO BACKEND
-      for (const ideaId of idsToDelete) {
+      // ✅ PROCESSAR TODAS AS IDEIAS EM PARALELO PARA MELHOR PERFORMANCE
+      const deletePromises = idsToDelete.map(async (ideaId) => {
         const idea = state.ideas.find(i => i.id === ideaId);
-        if (idea) {
-          console.log(`🗑️ Processando exclusão da ideia ${ideaId}: ${idea.titulo}`);
+        if (!idea) {
+          console.error(`❌ Ideia ${ideaId} não encontrada no estado local`);
+          return { success: false, ideaId };
+        }
+
+        console.log(`🗑️ Processando exclusão da ideia ${ideaId}: ${idea.titulo}`);
+        
+        try {
+          // ✅ CHAMADA AO BACKEND
+          const response = await fetch(getApiUrl(`ideias/${ideaId}`), {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+            },
+            body: JSON.stringify({
+              status: 'excluido',
+              deleted_at: currentTime
+            })
+          });
           
-          try {
-            // ✅ CHAMADA DIRETA AO BACKEND AGUARDANDO RESPOSTA
-            const response = await fetch(getApiUrl(`ideias/${ideaId}`), {
-              method: 'PATCH',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
-              },
-              body: JSON.stringify({
-                status: 'excluido',
-                deleted_at: currentTime
-              })
-            });
-            
-            const result = await response.json();
-            
-            if (response.ok && result.success) {
-              // ✅ ATUALIZAR ESTADO LOCAL APÓS CONFIRMAÇÃO DO BACKEND
-              actions.updateIdea(ideaId, {
-                status: 'excluido' as const,
-                deletedDate: currentTime
-              });
-              
-              successCount++;
-              console.log(`✅ Ideia ${ideaId} excluída com sucesso no backend e estado local`);
-            } else {
-              errorCount++;
-              console.error(`❌ Falha no backend para ideia ${ideaId}:`, result);
-            }
-          } catch (apiError) {
-            errorCount++;
-            console.error(`❌ Erro na API para ideia ${ideaId}:`, apiError);
+          const result = await response.json();
+          
+          if (response.ok && result.success) {
+            console.log(`✅ Ideia ${ideaId} excluída com sucesso no backend`);
+            return { success: true, ideaId };
+          } else {
+            console.error(`❌ Falha no backend para ideia ${ideaId}:`, result);
+            return { success: false, ideaId };
           }
+        } catch (apiError) {
+          console.error(`❌ Erro na API para ideia ${ideaId}:`, apiError);
+          return { success: false, ideaId };
+        }
+      });
+
+      // ✅ AGUARDAR TODAS AS EXCLUSÕES COMPLETAREM
+      const results = await Promise.all(deletePromises);
+      
+      // ✅ ATUALIZAR ESTADO LOCAL APENAS PARA AS QUE TIVERAM SUCESSO NO BACKEND
+      results.forEach(({ success, ideaId }) => {
+        if (success) {
+          actions.updateIdea(ideaId, {
+            status: 'excluido' as const,
+            deletedDate: currentTime
+          });
+          successCount++;
         } else {
           errorCount++;
-          console.error(`❌ Ideia ${ideaId} não encontrada no estado local`);
         }
-      }
+      });
 
       // ✅ LIMPAR SELEÇÃO APÓS TODAS AS OPERAÇÕES
       setSelectedIdeaIds([]);

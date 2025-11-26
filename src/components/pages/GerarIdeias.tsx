@@ -731,6 +731,18 @@ export function GerarIdeias({ userData, onPageChange, onUpdateUser }: GerarIdeia
       // Usar contentService para gerar ideias
       console.log('🤖 Gerando ideias com contentService...');
       
+      // Montar objeto CTA se configurado
+      const ctaData = formData.ctaTitulo || formData.ctaDescricao || formData.ctaBotao || formData.ctaLink ? {
+        titulo: formData.ctaTitulo,
+        descricao: formData.ctaDescricao,
+        botao: formData.ctaBotao,
+        link: formData.ctaLink,
+        imagem: formData.ctaImagem,
+        posicao: formData.ctaPosicao
+      } : undefined;
+
+      console.log('📢 CTA configurado:', ctaData ? 'SIM' : 'NÃO', ctaData);
+      
       const result = await contentService.generateIdeas({
         nicho: formData.nicho,
         palavrasChave: formData.palavrasChave,
@@ -741,7 +753,8 @@ export function GerarIdeias({ userData, onPageChange, onUpdateUser }: GerarIdeia
         siteId: formData.siteId, // Manter como string UUID
         autor: formData.autor,
         categorias: formData.categorias,
-        tags: formData.tags
+        tags: formData.tags,
+        cta: ctaData
       });
 
       console.log('🔍 DEBUG - Resultado completo do generateIdeas:', {
