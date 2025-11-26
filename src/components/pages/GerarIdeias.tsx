@@ -933,57 +933,54 @@ export function GerarIdeias({ userData, onPageChange, onUpdateUser }: GerarIdeia
     if (!hasCtaContent) return null;
 
     const ctaComponent = (
-      <div className="bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-dashed rounded-lg p-6" style={{ textAlign: 'center', borderColor: formData.ctaCorBorda || '#0066cc' }}>
-        <div className="max-w-2xl mx-auto" style={{ textAlign: 'center' }}>
-          {formData.ctaImagem && (
-            <div className="mb-4 flex justify-center" style={{ textAlign: 'center' }}>
-              <div className="relative inline-block">
-                <img 
-                  src={formData.ctaImagem} 
-                  alt="CTA Preview" 
-                  className="rounded-lg shadow-lg border-2"
-                  style={{
-                    maxWidth: '400px',
-                    maxHeight: '300px',
-                    width: 'auto',
-                    height: 'auto',
-                    objectFit: 'contain',
-                    borderColor: formData.ctaCorBorda || '#0066cc'
-                  }}
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                  }}
-                  onLoad={(e) => {
-                    const img = e.currentTarget as HTMLImageElement;
-                    console.log('Imagem CTA carregada:', {
-                      naturalWidth: img.naturalWidth,
-                      naturalHeight: img.naturalHeight,
-                      displayWidth: img.width,
-                      displayHeight: img.height
-                    });
-                  }}
-                />
-                <div className="absolute -bottom-2 -right-2 text-white text-xs px-2 py-1 rounded-full shadow-md" style={{ backgroundColor: formData.ctaCorBotao || '#0066cc' }}>
-                  Preview
-                </div>
-              </div>
+      <div className="border-2 border-dashed rounded-lg p-6" style={{ borderColor: formData.ctaCorBorda || '#0066cc', display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+        {/* Imagem - Miniatura retangular 16:9 */}
+        {formData.ctaImagem && (
+          <div className="relative flex-shrink-0" style={{ width: '280px', height: '160px' }}>
+            <img 
+              src={formData.ctaImagem} 
+              alt="CTA Preview" 
+              className="rounded-lg shadow-lg border-2 w-full h-full"
+              style={{
+                objectFit: 'contain',
+                backgroundColor: '#f5f5f5',
+                borderColor: formData.ctaCorBorda || '#0066cc'
+              }}
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+              onLoad={(e) => {
+                const img = e.currentTarget as HTMLImageElement;
+                console.log('Imagem CTA carregada:', {
+                  naturalWidth: img.naturalWidth,
+                  naturalHeight: img.naturalHeight,
+                  displayWidth: img.width,
+                  displayHeight: img.height
+                });
+              }}
+            />
+            <div className="absolute -bottom-2 -right-2 text-white text-xs px-2 py-1 rounded-full shadow-md" style={{ backgroundColor: formData.ctaCorBotao || '#0066cc' }}>
+              Miniatura
             </div>
-          )}
-          
+          </div>
+        )}
+
+        {/* Conteúdo textual */}
+        <div className="flex-1">
           {formData.ctaTitulo && (
-            <h3 className="font-poppins text-xl mb-3" style={{ textAlign: 'center', color: formData.ctaCorBotao || '#0066cc' }}>
+            <h3 className="font-poppins text-xl mb-2" style={{ color: formData.ctaCorBotao || '#0066cc' }}>
               {formData.ctaTitulo}
             </h3>
           )}
           
           {formData.ctaDescricao && (
-            <p className="font-montserrat text-gray-700 mb-4" style={{ textAlign: 'center' }}>
+            <p className="font-montserrat text-gray-700 mb-3">
               {formData.ctaDescricao}
             </p>
           )}
           
           {formData.ctaBotao && (
-            <div style={{ textAlign: 'center' }}>
+            <div>
               <Button 
                 className="font-montserrat px-6 py-2 text-white"
                 disabled
@@ -995,8 +992,8 @@ export function GerarIdeias({ userData, onPageChange, onUpdateUser }: GerarIdeia
             </div>
           )}
           
-          {formData.ctaLink && (
-            <div className="mt-2" style={{ textAlign: 'center' }}>
+          {formData.ctaLink && !formData.ctaBotao && (
+            <div className="mt-2">
               <span className="font-montserrat text-xs text-gray-500">
                 Link: {formData.ctaLink}
               </span>
