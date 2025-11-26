@@ -324,6 +324,40 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
     }
   }, [state.ideas]);
 
+  // ✅ NOVO: Limpar estado de processamento se artigo já foi criado
+  useEffect(() => {
+    // Verificar se há alguma ideia em estado de processamento que já tem artigo
+    Object.keys(processingSingle).forEach(ideaIdStr => {
+      const ideaId = parseInt(ideaIdStr);
+      
+      // Verificar se este artigo já existe
+      const article = state.articles.find(a => a.ideaId === ideaId);
+      
+      if (article && processingSingle[ideaId]) {
+        console.log(`✅ Artigo ${ideaId} já criado - limpando estado de processamento`);
+        
+        // Limpar estado de processamento e progresso
+        setProcessingSingle(prev => {
+          const newState = { ...prev };
+          delete newState[ideaId];
+          return newState;
+        });
+        
+        setSingleProgress(prev => {
+          const newState = { ...prev };
+          delete newState[ideaId];
+          return newState;
+        });
+        
+        setGlobalProcessingLock(prev => {
+          const newState = { ...prev };
+          delete newState[ideaId];
+          return newState;
+        });
+      }
+    });
+  }, [state.articles, processingSingle]);
+
   // Timer para controlar o botão de cancelar
   useEffect(() => {
     let interval: number;
@@ -2355,6 +2389,26 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
   const handleDeleteIdea = useCallback(async (ideaId: number) => {
     if (deletingSingle[ideaId]) return;
 
+    // ✅ NOVO: Limpar estado de processamento órfão se ainda estiver ativo
+    if (processingSingle[ideaId]) {
+      console.log(`🧹 Limpando estado de processamento órfão para ideia ${ideaId} antes de excluir`);
+      setProcessingSingle(prev => {
+        const newState = { ...prev };
+        delete newState[ideaId];
+        return newState;
+      });
+      setSingleProgress(prev => {
+        const newState = { ...prev };
+        delete newState[ideaId];
+        return newState;
+      });
+      setGlobalProcessingLock(prev => {
+        const newState = { ...prev };
+        delete newState[ideaId];
+        return newState;
+      });
+    }
+
     const idea = state.ideas.find(i => i.id === ideaId);
     if (!idea) {
       toast.error('Ideia não encontrada');
@@ -2411,7 +2465,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
         return newState;
       });
     }
-  }, [state.ideas, actions, deletingSingle]);
+  }, [state.ideas, actions, deletingSingle, processingSingle]);
 
   // FUNÇÃO PARA DELETAR EM MASSA
   const handleBatchDelete = useCallback(async () => {
