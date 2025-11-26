@@ -1979,12 +1979,42 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
       // Progresso: Gerando conteúdo (50%)
       setSingleProgress(prev => ({ ...prev, [ideaId]: 50 }));
       
+      // ✅ FALLBACK SMART: Se não há generation_params, tentar inferir do título
+      const detectIdiomFromTitle = (titulo: string): string => {
+        // Palavras-chave simples para detecção de idioma
+        const englishWords = ['how', 'what', 'why', 'when', 'where', 'the', 'to', 'for', 'and', 'or', 'best', 'tips', 'guide', 'ways', 'steps'];
+        const portuguesePalavras = ['como', 'o que', 'por que', 'quando', 'onde', 'para', 'e', 'ou', 'melhor', 'dicas', 'guia', 'maneiras', 'passos'];
+        const spanishPalavras = ['cómo', 'qué', 'por qué', 'cuándo', 'dónde', 'para', 'y', 'o', 'mejor', 'consejos', 'guía', 'maneras', 'pasos'];
+        
+        const tituloLower = titulo.toLowerCase();
+        let englishScore = 0, portugueseScore = 0, spanishScore = 0;
+        
+        englishWords.forEach(word => {
+          if (tituloLower.includes(word)) englishScore++;
+        });
+        portuguesePalavras.forEach(word => {
+          if (tituloLower.includes(word)) portugueseScore++;
+        });
+        spanishPalavras.forEach(word => {
+          if (tituloLower.includes(word)) spanishScore++;
+        });
+        
+        if (englishScore > portugueseScore && englishScore > spanishScore) return 'Inglês';
+        if (spanishScore > portugueseScore && spanishScore > englishScore) return 'Espanhol';
+        if (portugueseScore > 0) return 'Português';
+        
+        // Se título começa com letras maiúsculas de forma como em inglês, provavelmente é inglês
+        if (titulo.match(/^(How|What|Why|When|Where|The|Best|Tips|Guide|Ways|Steps)/)) return 'Inglês';
+        
+        return 'Português'; // Fallback padrão
+      };
+      
       // ✅ CORREÇÃO: Validar parâmetros obrigatórios
       const requestParams = {
         titulo: idea.titulo,
         nicho: idea.generationParams?.nicho || idea.categoria || 'Geral',
         palavras_chave: idea.generationParams?.palavrasChave || idea.tags?.join(', ') || 'tecnologia, artigo',
-        idioma: idea.generationParams?.idioma || 'Português',
+        idioma: idea.generationParams?.idioma || detectIdiomFromTitle(idea.titulo) || 'Português',
         conceito: idea.generationParams?.conceito || idea.generationParams?.contexto || '',
         empresa: '',
         idea_id: ideaId // ✅ ADICIONAR: ID da ideia para recuperar CTA
