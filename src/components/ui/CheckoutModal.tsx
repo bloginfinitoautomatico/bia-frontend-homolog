@@ -115,8 +115,6 @@ export function CheckoutModal({ isOpen, onClose, plan, userData, onSuccess }: Ch
       toast.error('❌ CPF inválido. Verifique os dígitos.');
       return false;
     }
-      return false;
-    }
 
     if (billingType === 'CREDIT_CARD') {
       if (!creditCard.holderName || !creditCard.number || !creditCard.expiryMonth || 

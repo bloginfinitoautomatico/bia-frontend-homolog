@@ -83,6 +83,32 @@ const sanitizeHtmlContent = (content: string): string => {
     .trim();
 };
 
+// ============= TYPE GUARDS E HELPERS PARA TRATAMENTO DE ERROS =============
+
+// Type guard para Error
+const isError = (error: unknown): error is Error => {
+  return error instanceof Error;
+};
+
+// Helper para extrair mensagem de erro
+const getErrorMessage = (error: unknown): string => {
+  if (isError(error)) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  return 'Erro desconhecido';
+};
+
+// Helper para verificar tipo de erro
+const getErrorName = (error: unknown): string => {
+  if (isError(error)) {
+    return error.name;
+  }
+  return '';
+};
+
 interface ProduzirArtigosProps {
   userData: any;
   onUpdateUser?: (updatedUserData: any) => Promise<boolean>;
@@ -688,7 +714,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
           return;
         }
         
-        const batchesByUser = {};
+        const batchesByUser: Record<string, Record<string, string | null>> = {};
         batchKeys.forEach(key => {
           const match = key.match(/^bia_batch_([^_]+)_(.+)$/);
           if (match) {
@@ -1163,8 +1189,9 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
   useEffect(() => {
     if (typeof window !== 'undefined') {
       (window as any).openEditModal = function(ideaId: string) {
-        const idea = state.ideas.find(i => i.id === ideaId);
-        const article = state.articles.find(a => a.ideaId === ideaId);
+        const ideaIdNum = Number(ideaId);
+        const idea = state.ideas.find(i => i.id === ideaIdNum);
+        const article = state.articles.find(a => a.ideaId === ideaIdNum);
         
         if (!idea || !article) {
           toast.error('Artigo não encontrado');
@@ -1867,7 +1894,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
         toast.success('Artigo atualizado com sucesso!');
         
         // Atualizar dados do modal
-        setCurrentViewingArticle(prev => ({
+        setCurrentViewingArticle((prev: any) => ({
           ...prev,
           article: {
             ...prev.article,
@@ -2093,15 +2120,17 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
           
         } catch (error) {
           lastError = error;
-          const isNetworkError = error.name === 'TypeError' && 
-            (error.message.includes('Failed to fetch') || 
-             error.message.includes('NetworkError') || 
-             error.message.includes('ERR_NETWORK_CHANGED'));
+          const errorName = getErrorName(error);
+          const errorMsg = getErrorMessage(error);
+          const isNetworkError = errorName === 'TypeError' && 
+            (errorMsg.includes('Failed to fetch') || 
+             errorMsg.includes('NetworkError') || 
+             errorMsg.includes('ERR_NETWORK_CHANGED'));
           
-          const isTimeoutError = error.name === 'AbortError' || error.name === 'TimeoutError';
+          const isTimeoutError = errorName === 'AbortError' || errorName === 'TimeoutError';
           
           if ((isNetworkError || isTimeoutError) && attempt < maxRetries) {
-            console.log(`⚠️ Erro de rede detectado (${error.message}), tentando novamente...`);
+            console.log(`⚠️ Erro de rede detectado (${errorMsg}), tentando novamente...`);
             continue;
           } else {
             throw error;
@@ -2216,7 +2245,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
         imageUrlLength: articleData.imageUrl?.length || 0
       });
 
-      const result = await actions.addArticle(articleData);
+      const result = (await actions.addArticle(articleData)) as unknown as { success: boolean; persistedIdeaId?: string | null };
       
       if (result.success) {
         console.log('✅ ARTIGO CRIADO COM SUCESSO - Status: Produzido');
@@ -2228,7 +2257,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
         // Só atualizar se tivermos um ID válido e que seja um UUID
         const isUuid = (v: any) => typeof v === 'string' && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(v);
         if (isUuid(ideaIdToUpdate)) {
-          actions.updateIdea(ideaIdToUpdate, { 
+          actions.updateIdea(Number(ideaIdToUpdate), { 
             status: 'produzido'
           });
         } else {
@@ -2300,30 +2329,33 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
       let errorMessage = 'Erro inesperado ao produzir artigo';
       let shouldRetry = false;
       
-      if (error.name === 'TypeError' && 
-          (error.message.includes('Failed to fetch') || 
-           error.message.includes('NetworkError') || 
-           error.message.includes('ERR_NETWORK_CHANGED'))) {
+      const errorName = getErrorName(error);
+      const errorMsg = getErrorMessage(error);
+      
+      if (errorName === 'TypeError' && 
+          (errorMsg.includes('Failed to fetch') || 
+           errorMsg.includes('NetworkError') || 
+           errorMsg.includes('ERR_NETWORK_CHANGED'))) {
         errorMessage = 'Erro de conectividade. Verifique sua conexão com a internet';
         shouldRetry = true;
-      } else if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+      } else if (errorName === 'AbortError' || errorName === 'TimeoutError') {
         errorMessage = 'Tempo limite excedido. O servidor pode estar sobrecarregado';
         shouldRetry = true;
-      } else if (error.message.includes('HTTP 429')) {
+      } else if (errorMsg.includes('HTTP 429')) {
         errorMessage = 'Muitas requisições. Aguarde um momento antes de tentar novamente';
         shouldRetry = true;
-      } else if (error.message.includes('HTTP 500') || error.message.includes('HTTP 502') || error.message.includes('HTTP 503')) {
+      } else if (errorMsg.includes('HTTP 500') || errorMsg.includes('HTTP 502') || errorMsg.includes('HTTP 503')) {
         errorMessage = 'Servidor temporariamente indisponível. Tente novamente em alguns minutos';
         shouldRetry = true;
-      } else if (error.message.includes('Limite atingido') || error.message.includes('créditos')) {
-        errorMessage = error.message;
+      } else if (errorMsg.includes('Limite atingido') || errorMsg.includes('créditos')) {
+        errorMessage = errorMsg;
         shouldRetry = false;
-      } else if (error.message) {
-        errorMessage = error.message;
+      } else if (errorMsg) {
+        errorMessage = errorMsg;
       }
       
       // ✅ MARCAR IDEIA COM STATUS 'erro' para permitir exclusão e nova tentativa
-      updateIdea(ideaId, {
+      actions.updateIdea(ideaId, {
         status: 'erro' as const,
         errorMessage: errorMessage
       });
@@ -2356,8 +2388,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
         });
       }
     } finally {
-      // ✅ LIMPAR AbortController e timeout
-      clearTimeout(timeoutId);
+      // ✅ LIMPAR AbortController (timeout automático foi desativado)
       setGenerationControllers(prev => {
         const newState = { ...prev };
         delete newState[ideaId];
@@ -2726,14 +2757,16 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
               
             } catch (error) {
               lastError = error;
-              const isRetryable = error.name === 'TypeError' && 
-                (error.message.includes('Failed to fetch') || 
-                 error.message.includes('NetworkError') || 
-                 error.message.includes('ERR_NETWORK_CHANGED')) ||
-                error.name === 'AbortError';
+              const errorName = getErrorName(error);
+              const errorMsg = getErrorMessage(error);
+              const isRetryable = errorName === 'TypeError' && 
+                (errorMsg.includes('Failed to fetch') || 
+                 errorMsg.includes('NetworkError') || 
+                 errorMsg.includes('ERR_NETWORK_CHANGED')) ||
+                errorName === 'AbortError';
               
               if (isRetryable && attempt < maxRetries) {
-                console.log(`⚠️ Erro recuperável em lote (${error.message}), tentando novamente...`);
+                console.log(`⚠️ Erro recuperável em lote (${errorMsg}), tentando novamente...`);
                 continue;
               } else {
                 throw error;
@@ -2853,23 +2886,26 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
           // ✅ TRATAMENTO MELHORADO DE ERROS EM LOTE
           let errorMessage = 'Erro desconhecido';
           
-          if (error.name === 'TypeError' && 
-              (error.message.includes('Failed to fetch') || 
-               error.message.includes('NetworkError') || 
-               error.message.includes('ERR_NETWORK_CHANGED'))) {
+          const errorName = getErrorName(error);
+          const errorMsg = getErrorMessage(error);
+          
+          if (errorName === 'TypeError' && 
+              (errorMsg.includes('Failed to fetch') || 
+               errorMsg.includes('NetworkError') || 
+               errorMsg.includes('ERR_NETWORK_CHANGED'))) {
             errorMessage = 'Erro de rede';
             console.log(`🌐 Erro de rede para ${idea.titulo} - continuando com próximo artigo`);
-          } else if (error.name === 'AbortError') {
+          } else if (errorName === 'AbortError') {
             errorMessage = 'Timeout';
             console.log(`⏰ Timeout para ${idea.titulo} - continuando com próximo artigo`);
-          } else if (error.message.includes('HTTP 429')) {
+          } else if (errorMsg.includes('HTTP 429')) {
             errorMessage = 'Rate limit';
             console.log(`🚦 Rate limit para ${idea.titulo} - pausando produção por 30s`);
             
             // Pausa mais longa para rate limit
             await new Promise(resolve => setTimeout(resolve, 30000));
-          } else if (error.message) {
-            errorMessage = error.message.substring(0, 50);
+          } else if (errorMsg) {
+            errorMessage = errorMsg.substring(0, 50);
           }
           
           console.log(`❌ Erro em lote para "${idea.titulo}": ${errorMessage}`);
@@ -3304,13 +3340,13 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
             };
             
             // 1. Atualizar artigo no estado local (BiaContext)
-            const localUpdateSuccess = actions.updateArticle(article.id, publishData);
+            const localUpdateSuccess = actions.updateArticle(Number(article.id), publishData);
             
             // 2. Atualizar artigo no backend Laravel para persistir e aparecer no calendário
             try {
               console.log(`💾 Atualizando artigo ${article.id} no backend Laravel (publicação em massa)...`);
               const { updateArticle } = await import('../../services/articleService');
-              const backendUpdateResult = await updateArticle(article.id, {
+              const backendUpdateResult = await updateArticle(Number(article.id), {
                 status: 'publicado', // Note: backend usa 'publicado', frontend usa 'Publicado'
                 published_at: new Date().toISOString(),
                 wordpress_data: publishResult.postId?.toString()
@@ -3546,13 +3582,13 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
           };
           
           // 1. Atualizar artigo no estado local (BiaContext)
-          const localUpdateSuccess = actions.updateArticle(article.id, publishData);
+          const localUpdateSuccess = actions.updateArticle(Number(article.id), publishData);
           
           // 2. Atualizar artigo no backend Laravel para persistir a alteração
           try {
             console.log('💾 Atualizando artigo no backend Laravel...');
             const { updateArticle } = await import('../../services/articleService');
-            const backendUpdateResult = await updateArticle(article.id, {
+            const backendUpdateResult = await updateArticle(Number(article.id), {
               status: 'publicado', // Note: backend usa 'publicado', frontend usa 'Publicado'
               published_at: new Date().toISOString(),
               wordpress_data: publishResult.postId?.toString()
@@ -3600,12 +3636,15 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
       
       let errorMessage = 'Erro na publicação WordPress';
       
-      if (error.name === 'AbortError') {
+      const errorName = getErrorName(error);
+      const errorMsg = getErrorMessage(error);
+      
+      if (errorName === 'AbortError') {
         errorMessage = 'Timeout na publicação. O WordPress pode estar lento ou indisponível.';
-      } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      } else if (errorMsg.includes('Failed to fetch') || errorMsg.includes('NetworkError')) {
         errorMessage = 'Erro de conectividade. Verifique sua conexão e tente novamente.';
-      } else if (error.message) {
-        errorMessage = error.message;
+      } else if (errorMsg) {
+        errorMessage = errorMsg;
       }
       
       toast.error(`Erro na publicação: ${errorMessage}`);
@@ -3700,7 +3739,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
 
       if (result.success && result.postId) {
         // Atualizar artigo com dados do agendamento
-        const articleUpdateSuccess = actions.updateArticle(article.id, {
+        const articleUpdateSuccess = actions.updateArticle(Number(article.id), {
           status: 'Agendado' as const,
           scheduledDate: localScheduleDate, // Usar data local consistente
           wordpressData: result.postId
@@ -3947,7 +3986,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
                 </Label>
                 <Select 
                   value={siteFilter === 'all' ? 'all' : siteFilter.toString()} 
-                  onValueChange={(value) => handleFilterChange('site', value === 'all' ? 'all' : value)}
+                  onValueChange={(value: string) => handleFilterChange('site', value === 'all' ? 'all' : value)}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Todos os sites" />
@@ -4134,7 +4173,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
                         <div className="flex items-center gap-2">
                           <Checkbox
                             checked={selectedIdeaIds.includes(idea.id)}
-                            onCheckedChange={(checked) => handleSelectIdea(idea.id, checked as boolean)}
+                            onCheckedChange={(checked: boolean) => handleSelectIdea(idea.id, checked)}
                             disabled={isProcessing || hasArticle || processingBatch}
                           />
                           <h4 className="font-poppins font-medium text-foreground flex-1">
@@ -4383,8 +4422,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
                     </Button>
                     <Button
                       onClick={handleCancelArticleEdit}
-                      variant="outline"
-                      className="px-3 py-1 text-sm"
+                      className="px-3 py-1 text-sm border bg-background text-foreground hover:bg-accent hover:text-accent-foreground"
                     >
                       <XCircle className="h-4 w-4 mr-1" />
                       Cancelar
@@ -4432,7 +4470,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
                 <div>
                   <Label className="font-montserrat text-sm text-gray-600 mb-2 block">Tags</Label>
                   <div className="flex flex-wrap gap-2">
-                    {currentViewingArticle.idea.tags.map((tag, idx) => (
+                    {currentViewingArticle.idea.tags.map((tag: string, idx: number) => (
                       <Badge key={idx} className="text-xs bg-white text-[#8c52ff] border border-[#8c52ff] px-1 rounded">
                         {tag}
                       </Badge>
@@ -4550,7 +4588,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
                 mode="single"
                 selected={selectedDate}
                 onSelect={setSelectedDate}
-                disabled={(date) => date < new Date()}
+                disabled={(date: Date) => date < new Date()}
                 className="rounded-md border w-full"
                 locale={ptBR}
               />
