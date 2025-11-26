@@ -65,7 +65,7 @@ export class ContentService {
         idioma: params.idioma,
         contexto: params.contexto || '', // OpenAI controller espera contexto
         persist: true, // SEMPRE persistir ideias geradas
-        site_id: params.siteId, // Incluir site_id se fornecido
+        site_id: params.siteId && params.siteId.trim() ? params.siteId : null, // Converter vazio para null
         cta: params.cta // Incluir CTA se configurado
       };
       
