@@ -1803,57 +1803,57 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
         
         for (const ideaData of ideasData) {
           try {
-            // ✅ CORREÇÃO: Validar e processar siteId - pode ser UUID, número ou string numérica
-            let validSiteId: number | null = null;
+            // ✅ CORREÇÃO DEFINITIVA: Backend usa UUID, validar e enviar UUID diretamente
+            let backendSiteId: string | null = null;
             if (ideaData.siteId) {
               const siteIdValue = String(ideaData.siteId);
               
-              // Verificar se é um UUID válido (formato: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
+              // Verificar se já é um UUID válido (formato: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
               const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(siteIdValue);
               
               if (isUuid) {
-                // Se já é UUID, encontrar o ID numérico correspondente
-                const siteObj = state.sites.find(s => s.uuid === siteIdValue || String(s.id) === siteIdValue);
+                // Se já é UUID, usar diretamente (validar se existe localmente)
+                const siteObj = state.sites.find(s => String(s.id) === siteIdValue || s.uuid === siteIdValue);
                 
                 if (siteObj) {
-                  validSiteId = siteObj.id;
-                  console.log(`✅ UUID convertido para ID numérico: ${siteIdValue} → ${validSiteId}`);
+                  backendSiteId = siteIdValue;
+                  console.log(`✅ UUID validado: ${backendSiteId} (${siteObj.nome})`);
                 } else {
-                  console.warn(`⚠️ UUID não encontrado localmente: ${siteIdValue}`);
+                  // UUID não encontrado localmente, mas pode ser válido no backend
+                  backendSiteId = siteIdValue;
+                  console.warn(`⚠️ UUID não encontrado localmente, mas enviando para backend: ${siteIdValue}`);
                 }
               } else {
-                // ✅ CORREÇÃO: Converter string numérica ou número para ID numérico
+                // Se não for UUID, converter número/string para UUID encontrando o site
                 const siteIdNum = parseInt(siteIdValue);
-                if (!isNaN(siteIdNum) && siteIdNum > 0 && siteIdNum < 1000000000000) {
-                  // Verificar se o site existe
-                  const siteObj = state.sites.find(s => s.id === siteIdNum);
+                if (!isNaN(siteIdNum)) {
+                  const siteObj = state.sites.find(s => {
+                    // Buscar por ID como número ou como string (compatibilidade)
+                    return s.id === siteIdNum || String(s.id) === siteIdValue;
+                  });
+                  
                   if (siteObj) {
-                    validSiteId = siteIdNum;
-                    console.log(`✅ ID numérico validado: ${validSiteId}`);
+                    // Usar UUID do site encontrado, ou fallback para o ID
+                    backendSiteId = siteObj.uuid || String(siteObj.id);
+                    console.log(`✅ ID ${siteIdValue} convertido para UUID: ${backendSiteId} (${siteObj.nome})`);
                   } else {
-                    console.warn(`⚠️ Site não encontrado para ID: ${siteIdNum}. Sites disponíveis:`, state.sites.map(s => ({ id: s.id, nome: s.nome })));
+                    console.warn(`⚠️ Site não encontrado para ID: ${siteIdNum}. Sites disponíveis:`, 
+                      state.sites.map(s => ({ id: s.id, uuid: s.uuid, nome: s.nome })));
                   }
                 } else {
-                  console.warn('⚠️ ID do site inválido (não é UUID nem número válido):', siteIdValue);
+                  console.warn('⚠️ ID do site inválido (não é UUID nem número):', siteIdValue);
                 }
               }
             } else {
               console.log('📝 Nenhum site_id fornecido');
             }
 
-            // ✅ CORREÇÃO FINAL: Backend usa UUID, converter ID numérico se necessário
-            let backendSiteId: string | null = null;
-            if (validSiteId) {
-              const siteObj = state.sites.find(s => s.id === validSiteId);
-              if (siteObj) {
-                // Se o site tem UUID, usar UUID; senão usar o ID como string
-                backendSiteId = siteObj.uuid || String(siteObj.id);
-                console.log(`💾 Criando ideia no backend com site_id: ${backendSiteId} (de ID local: ${validSiteId})...`, ideaData.titulo);
-              } else {
-                console.warn(`⚠️ Site ${validSiteId} não encontrado no estado local, tentando enviar mesmo assim`);
-                backendSiteId = String(validSiteId);
-              }
+            if (!backendSiteId) {
+              console.warn(`⚠️ Ignorando ideia "${ideaData.titulo}" - site_id inválido ou não encontrado`);
+              continue; // Pular esta ideia
             }
+
+            console.log(`💾 Criando ideia no backend...`, { titulo: ideaData.titulo, site_id: backendSiteId });
 
             const result = await apiService.createIdeia({
               titulo: ideaData.titulo,
