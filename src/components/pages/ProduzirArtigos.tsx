@@ -119,6 +119,10 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
   // ✅ NOVO: Armazenar AbortControllers para cancelar gerações em andamento
   const [generationControllers, setGenerationControllers] = useState<Record<number, AbortController>>({});
   
+  // ✅ NOVO: Rastrear tempo de início de geração por ideia (para mostrar botão cancel após 3min)
+  const [generationStartTimes, setGenerationStartTimes] = useState<Record<number, number>>({});
+  const [showCancelButtonForIdea, setShowCancelButtonForIdea] = useState<Record<number, boolean>>({});
+  
   const setProcessingSingle = useCallback((updater: Record<number, boolean> | ((prev: Record<number, boolean>) => Record<number, boolean>)) => {
     setProcessingSingleState(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
@@ -524,6 +528,33 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
       localStorage.setItem(totalItemsKey, batchTotalItems.toString());
     }
   }, [processingBatch, isBatchPersistent, batchCurrentItem, batchTotalItems, getUserSpecificKey]);
+
+  // ✅ NOVO: Monitorar tempo de geração individual e mostrar botão cancelar após 3 minutos
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setShowCancelButtonForIdea(prev => {
+        const updated = { ...prev };
+        let hasChanges = false;
+        
+        Object.keys(generationStartTimes).forEach(ideaIdStr => {
+          const ideaId = parseInt(ideaIdStr);
+          const startTime = generationStartTimes[ideaId];
+          const elapsedSeconds = (Date.now() - startTime) / 1000;
+          const shouldShowButton = elapsedSeconds >= 180; // 3 minutos
+          
+          if (shouldShowButton && !updated[ideaId]) {
+            updated[ideaId] = true;
+            hasChanges = true;
+            console.log(`⏱️ ${elapsedSeconds.toFixed(0)}s: Mostrando botão cancelar para ideia ${ideaId}`);
+          }
+        });
+        
+        return hasChanges ? updated : prev;
+      });
+    }, 1000); // Atualizar a cada segundo
+    
+    return () => clearInterval(interval);
+  }, [generationStartTimes]);
 
   // Sincronizar WordPress e verificar API OpenAI na inicialização
   useEffect(() => {
@@ -1059,6 +1090,19 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
     
     // Remover controller
     setGenerationControllers(prev => {
+      const newState = { ...prev };
+      delete newState[ideaId];
+      return newState;
+    });
+    
+    // ✅ NOVO: Remover tempo de início e botão cancelar
+    setGenerationStartTimes(prev => {
+      const newState = { ...prev };
+      delete newState[ideaId];
+      return newState;
+    });
+    
+    setShowCancelButtonForIdea(prev => {
       const newState = { ...prev };
       delete newState[ideaId];
       return newState;
@@ -1673,6 +1717,11 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
       const abortController = new AbortController();
       setGenerationControllers(prev => ({ ...prev, [ideaId]: abortController }));
       
+      // ✅ NOVO: Registrar tempo de início da geração (para mostrar botão cancelar após 3min)
+      const startTime = Date.now();
+      setGenerationStartTimes(prev => ({ ...prev, [ideaId]: startTime }));
+      console.log(`⏱️ Geração iniciada para ideia ${ideaId} - botão cancelar aparecerá após 180s`);
+      
       // ✅ NOVO: Timeout de 3 minutos (180 segundos)
       const timeoutId = setTimeout(() => {
         console.log(`⏰ Timeout de 3 minutos atingido para ideia ${ideaId} - cancelando...`);
@@ -1967,6 +2016,19 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
       // ✅ LIMPAR AbortController e timeout
       clearTimeout(timeoutId);
       setGenerationControllers(prev => {
+        const newState = { ...prev };
+        delete newState[ideaId];
+        return newState;
+      });
+      
+      // ✅ NOVO: Limpar tempo de início e botão cancelar
+      setGenerationStartTimes(prev => {
+        const newState = { ...prev };
+        delete newState[ideaId];
+        return newState;
+      });
+      
+      setShowCancelButtonForIdea(prev => {
         const newState = { ...prev };
         delete newState[ideaId];
         return newState;
@@ -3855,14 +3917,14 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
                           </Button>
                         )}
                         
-                        {/* 🛑 Botão para cancelar geração em andamento */}
-                        {isProcessing && (
+                        {/* 🛑 Botão para cancelar geração em andamento - Aparece apenas após 3 minutos */}
+                        {isProcessing && showCancelButtonForIdea[idea.id] && (
                           <Button
                             onClick={() => handleCancelProduction(idea.id)}
                             className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 text-sm"
                           >
                             <AlertCircle className="h-4 w-4 mr-1" />
-                            Cancelar
+                            Cancelar (3min+)
                           </Button>
                         )}
                         
