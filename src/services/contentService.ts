@@ -236,18 +236,21 @@ export class ContentService {
 
 Este artigo é para um blog no nicho de "${params.nicho}" e deve focar nas seguintes palavras-chave: "${params.palavrasChave}".
 
-### Instruções Críticas - LEIA E SIGA RIGOROSAMENTE:
+**OBRIGATÓRIO**: Inclua 2-3 backlinks externos para fontes confiáveis e relevantes (sites governamentais, universidades, empresas reconhecidas). Use URLs reais e distribua naturalmente no texto.
+
+INSTRUÇÕES CRÍTICAS - LEIA E SIGA RIGOROSAMENTE:
 
 1. NÃO inclua o título H1 no texto
 2. O conteúdo deve conter de 2.000 a 3.500 palavras
 3. Use técnicas de copywriting e storytelling para deixar o conteúdo relevante e engajante  
 4. O artigo DEVE ser 100% sobre "${params.tema}" - este é o tema central e ÚNICO
 5. Cite ao menos 8 a 12 vezes as palavras-chave: ${params.palavrasChave}
-6. NÃO seja literal ao seguir estruturas robóticas, seja criativo e persuasivo
-7. NÃO use placeholders, o texto será publicado sem revisão
-8. NÃO comece ou termine falando 'segue o conteúdo solicitado'${ctaSection}
+6. **OBRIGATÓRIO**: Inclua 2-3 backlinks externos para fontes relevantes, confiáveis e existentes (ex: sites governamentais, universidades, empresas reconhecidas, estudos). Use links reais e distribua naturalmente no texto com anchor text adequado
+7. NÃO seja literal ao seguir estruturas robóticas, seja criativo e persuasivo
+8. NÃO use placeholders, o texto será publicado sem revisão
+9. NÃO comece ou termine falando 'segue o conteúdo solicitado'${ctaSection}
 
-### ESTRUTURA OBRIGATÓRIA (2000-3500 palavras):
+ESTRUTURA OBRIGATÓRIA (2000-3500 palavras):
 
 **1. INTRODUÇÃO ENVOLVENTE** (300-400 palavras)
 - Hook específico relacionado a "${params.tema}"
@@ -265,14 +268,14 @@ Este artigo é para um blog no nicho de "${params.nicho}" e deve focar nas segui
 - Próximos passos específicos
 - Inspiração para implementação
 
-### FORMATO HTML SEMÂNTICO:
+FORMATO HTML SEMÂNTICO:
 - Estruture com <article>
 - <h2> para seções principais (4-6 seções criativas)
 - <h3> para subseções quando necessário
 - <p> para parágrafos densos
 - <ul>/<ol> para listas organizadas
 
-### QUALIDADE EXIGIDA:
+QUALIDADE EXIGIDA:
 - Extensão: 2000-3500 palavras densas
 - Tom: Consultor especializado no nicho
 - Linguagem: Técnica mas acessível

@@ -21,12 +21,16 @@ ENV VITE_BACKEND_URL=https://api.bloginfinitoautomatico.com
 ENV VITE_API_URL=https://api.bloginfinitoautomatico.com
 ENV VITE_APP_NAME="BIA - Blog Infinito Automático"
 ENV VITE_ENABLE_PROD_LOGS=false
+ENV NODE_OPTIONS="--max-old-space-size=4096"
+ENV CI=true
 
 # Copiar código fonte
 COPY . .
 
-# Build da aplicação
-RUN pnpm run build
+# Build da aplicação com timeout extendido
+RUN npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    pnpm run build
 
 # --- Production Stage ---
 FROM nginx:1.27-alpine

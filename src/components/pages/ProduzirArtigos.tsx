@@ -2121,16 +2121,21 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
           console.log(`📝 Processando conteúdo e imagem do artigo ${ideaId}...`);
           
           // O conteúdo já vem formatado e processado do novo sistema unificado
-          // Sanitizar conteúdo removendo blocos de código Markdown
+            // Sanitizar conteúdo removendo blocos de código Markdown
           let processedContent = sanitizeHtmlContent(apiResponse.article || '');
 
-          // Inserir CTA no conteúdo se configurado
+          // ✅ SISTEMA CTA: Verificar se CTA deve ser aplicado do backend OU da ideia local
           if (idea.cta) {
+            console.log(`🎯 Aplicando CTA da ideia local para ${idea.titulo}:`, {
+              titulo: idea.cta.titulo,
+              posicao: idea.cta.posicao,
+              link: idea.cta.link ? 'SIM' : 'NÃO'
+            });
             processedContent = insertCtaInContent(processedContent, idea.cta);
-            console.log(`🎯 CTA inserido no artigo ${idea.titulo}`);
-          }
-
-          const articleData = {
+            console.log(`✅ CTA da ideia local inserido no artigo ${idea.titulo}`);
+          } else {
+            console.log(`ℹ️ Nenhum CTA local encontrado na ideia ${idea.titulo} - Backend deve ter aplicado se configurado`);
+          }          const articleData = {
             titulo: idea.titulo,
             conteudo: processedContent,
             status: 'rascunho' as const,
