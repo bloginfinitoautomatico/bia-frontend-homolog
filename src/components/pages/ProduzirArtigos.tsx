@@ -529,8 +529,12 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
     }
   }, [processingBatch, isBatchPersistent, batchCurrentItem, batchTotalItems, getUserSpecificKey]);
 
-  // ✅ NOVO: Monitorar tempo de geração individual e mostrar botão cancelar após 3 minutos
+  // ✅ DESATIVADO: Monitorar tempo de geração individual (timeout automático removido)
+  // Anteriormente mostrava botão cancelar após 180 segundos - agora desativado
+  // Usuário pode cancelar manualmente a qualquer momento
   useEffect(() => {
+    // Código comentado - funcionalidade desativada
+    /*
     const interval = setInterval(() => {
       setShowCancelButtonForIdea(prev => {
         const updated = { ...prev };
@@ -554,6 +558,8 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
     }, 1000); // Atualizar a cada segundo
     
     return () => clearInterval(interval);
+    */
+    return () => {}; // Sem operação - desativado
   }, [generationStartTimes]);
 
   // Sincronizar WordPress e verificar API OpenAI na inicialização
@@ -1717,19 +1723,14 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
       const abortController = new AbortController();
       setGenerationControllers(prev => ({ ...prev, [ideaId]: abortController }));
       
-      // ✅ NOVO: Registrar tempo de início da geração (para mostrar botão cancelar após 3min)
+      // ✅ NOVO: Registrar tempo de início da geração
       const startTime = Date.now();
       setGenerationStartTimes(prev => ({ ...prev, [ideaId]: startTime }));
-      console.log(`⏱️ Geração iniciada para ideia ${ideaId} - botão cancelar aparecerá após 180s`);
+      console.log(`⏱️ Geração iniciada para ideia ${ideaId}`);
       
-      // ✅ NOVO: Timeout de 3 minutos (180 segundos)
-      const timeoutId = setTimeout(() => {
-        console.log(`⏰ Timeout de 3 minutos atingido para ideia ${ideaId} - cancelando...`);
-        abortController.abort();
-        toast.error('Timeout: Geração demorou muito tempo', {
-          description: 'Tente novamente em alguns minutos'
-        });
-      }, 180000); // 3 minutos
+      // ✅ NOVO COMENTÁRIO: Timeout automático DESATIVADO - permite geração prolongada
+      // O usuário pode cancelar manualmente clicando no botão "Cancelar"
+      // Não há mais limite de tempo automático para evitar interrupções inesperadas
       
       // ✅ NOVA IMPLEMENTAÇÃO: Retry automático para problemas de rede
       let response;
@@ -2370,8 +2371,8 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
                   conceito: idea.generationParams?.conceito || idea.generationParams?.contexto || '',
                   empresa: '',
                   idea_id: ideaId // ✅ ADICIONAR: ID da ideia para recuperar CTA (batch)
-                }),
-                signal: AbortSignal.timeout(180000) // 3 minutos para produção em lote
+                })
+                // ✅ REMOVIDO: Timeout automático de 180s - permite geração prolongada em batch
               });
 
               if (!response.ok) {
