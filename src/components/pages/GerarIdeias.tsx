@@ -883,14 +883,15 @@ export function GerarIdeias({ userData, onPageChange, onUpdateUser }: GerarIdeia
         
         toast.success(`${newIdeas.length} ideia(s) gerada(s) com sucesso usando IA para ${selectedSite?.nome}!`);
         
-        // Reset form on success (mantendo apenas o siteId)
+        // Reset form on success (mantendo apenas o siteId e idioma selecionado)
         const currentSiteId = formData.siteId;
+        const currentIdioma = formData.idioma; // ✅ CORREÇÃO: Manter idioma selecionado
         setFormData({
           siteId: currentSiteId, // Manter site selecionado
           nicho: '',
           palavrasChave: '',
           quantidade: 5,
-          idioma: 'Português',
+          idioma: currentIdioma, // ✅ CORREÇÃO: Usar idioma mantido, não resetar para Português
           contexto: '',
           autor: 'none',
           categorias: [],

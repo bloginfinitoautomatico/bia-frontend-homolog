@@ -2010,10 +2010,15 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
       };
       
       // ✅ CORREÇÃO: Validar parâmetros obrigatórios
+      // Priorizar: palavrasChave da geração > tags da ideia > nicho como fallback
+      const palavrasChaveGeradas = idea.generationParams?.palavrasChave?.trim();
+      const palavrasChavetags = idea.tags?.join(', ')?.trim();
+      const palavrasChaveFinal = palavrasChaveGeradas || palavrasChavetags || idea.categoria || 'Geral';
+      
       const requestParams = {
         titulo: idea.titulo,
         nicho: idea.generationParams?.nicho || idea.categoria || 'Geral',
-        palavras_chave: idea.generationParams?.palavrasChave || idea.tags?.join(', ') || 'tecnologia, artigo',
+        palavras_chave: palavrasChaveFinal,
         idioma: idea.generationParams?.idioma || detectIdiomFromTitle(idea.titulo) || 'Português',
         conceito: idea.generationParams?.conceito || idea.generationParams?.contexto || '',
         empresa: '',
