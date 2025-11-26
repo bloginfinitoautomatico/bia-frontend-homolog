@@ -373,9 +373,10 @@ class ApiService {
         const sitesArray = Array.isArray(result.data) ? result.data : result.data.data || [];
         
         // Converter resposta do backend para formato frontend
-        const sites: Site[] = sitesArray.map((item: any, index: number) => ({
-          id: index + 1, // ID numérico sequencial para compatibilidade local
-          uuid: item.id, // Preservar UUID do backend
+        // ✅ CORREÇÃO: Preservar ID original do backend em vez de sequencial
+        const sites: Site[] = sitesArray.map((item: any) => ({
+          id: item.id, // Usar ID do backend (pode ser UUID ou número)
+          uuid: item.id, // Preservar UUID do backend também no campo uuid
           user_id: item.user_id,
           user: item.user, // Incluir dados do usuário proprietário (para admins)
           nome: item.nome,
