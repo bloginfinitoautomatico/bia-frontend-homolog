@@ -119,18 +119,28 @@ class SubscriptionService {
       // Verificar se houve erro de rede ou timeout
       if (!response.ok) {
         let errorMessage = 'Erro ao criar assinatura';
+        let errorDetails = null;
         
         try {
           const errorResult = await response.json();
           errorMessage = errorResult.message || errorResult.error || errorMessage;
+          errorDetails = errorResult;
           
           console.error('❌ Erro na resposta da API:', {
             status: response.status,
             statusText: response.statusText,
-            error: errorResult
+            url: response.url,
+            error: errorResult,
+            debug_info: errorResult.debug_info
           });
+          
+          // Log adicional se tiver informações de debug
+          if (errorResult.debug_info) {
+            console.error('🔍 Debug info do backend:', errorResult.debug_info);
+          }
         } catch (parseError) {
           console.error('❌ Erro ao parsear resposta de erro:', parseError);
+          console.error('📄 Resposta bruta:', await response.text().catch(() => 'não disponível'));
           
           // Para erro 500, dar uma mensagem mais específica
           if (response.status === 500) {
@@ -139,10 +149,17 @@ class SubscriptionService {
             errorMessage = 'Serviço temporariamente indisponível. Aguarde alguns segundos e tente novamente.';
           } else if (response.status === 504) {
             errorMessage = 'Timeout do servidor. Tente novamente em alguns instantes.';
+          } else if (response.status === 422) {
+            errorMessage = 'Dados inválidos. Verifique as informações fornecidas.';
+          } else if (response.status === 404) {
+            errorMessage = 'Recurso não encontrado. Verifique se o plano selecionado está disponível.';
           }
         }
         
-        throw new Error(errorMessage);
+        const error = new Error(errorMessage);
+        (error as any).details = errorDetails;
+        (error as any).status = response.status;
+        throw error;
       }
 
       const result = await response.json();
