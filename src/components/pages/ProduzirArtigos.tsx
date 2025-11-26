@@ -1234,7 +1234,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
       return;
     }
 
-    // Criar HTML da página completa
+    // Criar HTML da página completa com formatação profissional
     const siteName = getSiteName(idea.siteId);
     const wordCount = countWords(article.conteudo);
     
@@ -1246,99 +1246,365 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>${article.titulo}</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            line-height: 1.6;
-            max-width: 800px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.65;
+            max-width: 900px;
             margin: 0 auto;
-            padding: 20px;
-            color: #333;
-            background-color: #f9f9f9;
-        }
-        .article-container {
-            background: white;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        .article-meta {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 30px;
-            border-left: 4px solid #8c52ff;
-        }
-        .article-meta h3 {
-            margin: 0 0 10px 0;
-            color: #8c52ff;
+            padding: 30px 20px;
+            color: #2c3e50;
+            background: linear-gradient(135deg, #f5f7fa 0%, #f9fafb 100%);
             font-size: 16px;
         }
-        .article-meta p {
-            margin: 5px 0;
-            font-size: 14px;
-            color: #666;
+        
+        .article-container {
+            background: #ffffff;
+            padding: 50px 45px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 4px 16px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
         }
+        
+        .article-meta {
+            background: linear-gradient(135deg, #f8fafc 0%, #e8f0ff 100%);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 35px;
+            border-left: 5px solid #8c52ff;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        
+        .article-meta h3 {
+            grid-column: 1 / -1;
+            margin: 0 0 10px 0;
+            color: #8c52ff;
+            font-size: 15px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .article-meta p {
+            margin: 0;
+            font-size: 14px;
+            color: #555;
+            line-height: 1.5;
+        }
+        
+        .article-meta strong {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        
         .featured-image {
             text-align: center;
-            margin: 30px 0;
+            margin: 40px 0;
+            line-height: 0;
         }
+        
         .featured-image img {
             max-width: 100%;
             height: auto;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            display: block;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+            transition: transform 0.3s ease;
         }
+        
+        .featured-image img:hover {
+            transform: scale(1.01);
+        }
+        
         .article-title {
-            color: #2c3e50;
-            font-size: 2.5em;
-            margin-bottom: 25px;
-            margin-top: 20px;
-            line-height: 1.2;
+            color: #1a2a3a;
+            font-size: 2.8em;
+            font-weight: 700;
+            margin: 30px 0 25px 0;
+            line-height: 1.3;
             text-align: center;
-            border-bottom: 3px solid #8c52ff;
-            padding-bottom: 15px;
+            border-bottom: 4px solid #8c52ff;
+            padding-bottom: 20px;
+            letter-spacing: -0.5px;
         }
+        
+        h1, h2, h3, h4, h5, h6 {
+            color: #1a2a3a;
+            font-weight: 700;
+            line-height: 1.3;
+            margin-top: 35px;
+            margin-bottom: 15px;
+        }
+        
         h1 {
-            color: #2c3e50;
-            font-size: 2.5em;
-            margin-bottom: 20px;
-            line-height: 1.2;
+            font-size: 2.2em;
+            color: #0a1a2a;
         }
+        
         h2 {
-            color: #34495e;
-            font-size: 1.8em;
-            margin-top: 30px;
-            margin-bottom: 15px;
-            border-bottom: 2px solid #8c52ff;
-            padding-bottom: 5px;
+            font-size: 1.75em;
+            border-bottom: 3px solid #8c52ff;
+            padding-bottom: 10px;
+            color: #1a2a3a;
         }
+        
         h3 {
-            color: #34495e;
             font-size: 1.4em;
-            margin-top: 25px;
-            margin-bottom: 15px;
-        }
-        p {
-            margin-bottom: 15px;
-            text-align: justify;
-        }
-        ul, ol {
-            margin-bottom: 15px;
-            padding-left: 30px;
-        }
-        li {
-            margin-bottom: 5px;
-        }
-        strong {
             color: #2c3e50;
         }
+        
+        h4, h5, h6 {
+            font-size: 1.15em;
+            color: #34495e;
+        }
+        
+        p {
+            margin: 0 0 18px 0;
+            text-align: justify;
+            color: #2c3e50;
+        }
+        
+        a {
+            color: #8c52ff;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+            border-bottom: 1px solid rgba(140, 82, 255, 0.3);
+        }
+        
+        a:hover {
+            color: #6b3dd0;
+            border-bottom-color: rgba(107, 61, 208, 0.6);
+        }
+        
+        ul {
+            margin: 0 0 20px 30px;
+            padding: 0;
+            list-style-position: outside;
+        }
+        
+        ol {
+            margin: 0 0 20px 30px;
+            padding: 0;
+            list-style-position: outside;
+        }
+        
+        li {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+            line-height: 1.65;
+        }
+        
+        li ul, li ol {
+            margin-top: 8px;
+            margin-bottom: 0;
+        }
+        
+        strong {
+            color: #1a2a3a;
+            font-weight: 600;
+        }
+        
+        em {
+            color: #34495e;
+            font-style: italic;
+        }
+        
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #e74c3c;
+        }
+        
+        pre {
+            background: #282c34;
+            color: #abb2bf;
+            padding: 15px 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 20px 0;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 0.85em;
+            line-height: 1.5;
+        }
+        
+        pre code {
+            background: none;
+            color: #abb2bf;
+            padding: 0;
+        }
+        
+        blockquote {
+            border-left: 5px solid #8c52ff;
+            padding-left: 20px;
+            margin: 25px 0;
+            color: #34495e;
+            font-style: italic;
+            background: #f8fafc;
+            padding: 15px 15px 15px 20px;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 25px 0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        th {
+            background: #8c52ff;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        tr:hover {
+            background: #f9fafb;
+        }
+        
+        /* CTA Styles */
+        .bia-cta-container {
+            border-left: 5px solid #8c52ff;
+            background-color: #f9fafb;
+            padding: 25px;
+            border-radius: 10px;
+            margin: 30px 0;
+            display: flex;
+            gap: 25px;
+            align-items: flex-start;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .bia-cta-container:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .bia-cta-image {
+            flex-shrink: 0;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .bia-cta-image img {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        
+        .bia-cta-content {
+            flex: 1;
+        }
+        
+        .bia-cta-content h3 {
+            margin-top: 0;
+            color: #1a2a3a;
+        }
+        
+        .bia-cta-button {
+            display: inline-block;
+            padding: 12px 28px;
+            border-radius: 6px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+            font-size: 1em;
+            margin-top: 10px;
+        }
+        
+        .bia-cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .bia-cta-button:active {
+            transform: translateY(0);
+        }
+        
+        hr {
+            border: none;
+            height: 1px;
+            background: linear-gradient(to right, transparent, #ddd, transparent);
+            margin: 40px 0;
+        }
+        
         .print-button {
             display: none;
         }
+        
         @media print {
-            .print-button { display: none; }
-            body { background: white; }
-            .article-container { box-shadow: none; }
+            body {
+                background: white;
+                padding: 0;
+            }
+            .article-container {
+                box-shadow: none;
+                padding: 0;
+                background: white;
+            }
+            .article-meta {
+                display: none;
+            }
+            .print-button {
+                display: none;
+            }
+            a {
+                border: none;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .article-container {
+                padding: 30px 20px;
+            }
+            
+            .article-title {
+                font-size: 2em;
+            }
+            
+            h1 {
+                font-size: 1.6em;
+            }
+            
+            h2 {
+                font-size: 1.4em;
+            }
+            
+            .article-meta {
+                grid-template-columns: 1fr;
+            }
+            
+            .bia-cta-container {
+                flex-direction: column;
+                gap: 15px;
+            }
         }
     </style>
 </head>
@@ -1348,14 +1614,14 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
         <div class="article-meta">
             <h3>📊 Informações do Artigo</h3>
             <p><strong>Site:</strong> ${siteName}</p>
-            <p><strong>Palavras:</strong> ${wordCount}</p>
+            <p><strong>Palavras:</strong> ${wordCount.toLocaleString('pt-BR')}</p>
             <p><strong>Status:</strong> ${article.status}</p>
             <p><strong>Criado em:</strong> ${new Date(article.createdAt).toLocaleDateString('pt-BR')}</p>
         </div>
 
         ${article.imageUrl ? `
         <div class="featured-image">
-            <img src="${article.imageUrl}" alt="Imagem do artigo: ${article.titulo}" />
+            <img src="${article.imageUrl}" alt="Imagem do artigo: ${article.titulo}" loading="lazy" />
         </div>
         ` : ''}
 
@@ -1364,6 +1630,21 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
     </div>
 
     <script>
+        // Aplicar estilos aos CTAs - converter links em botões
+        document.querySelectorAll('.bia-cta-container').forEach(cta => {
+            const link = cta.querySelector('a[href]');
+            if (link && !link.classList.contains('bia-cta-button')) {
+                const buttonStyle = link.getAttribute('data-button-style') || '#8c52ff';
+                link.classList.add('bia-cta-button');
+                link.style.backgroundColor = buttonStyle;
+                link.style.color = '#ffffff';
+                if (link.style.borderLeft) {
+                    const borderColor = link.style.borderLeft.match(/#[0-9a-f]{6}/i)?.[0] || '#8c52ff';
+                    link.style.backgroundColor = borderColor;
+                }
+            }
+        });
+        
         // Melhorar formatação de listas
         document.querySelectorAll('ul, ol').forEach(list => {
             list.style.marginBottom = '20px';
@@ -1372,6 +1653,13 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
         // Adicionar espaçamento extra entre seções
         document.querySelectorAll('h2').forEach(h2 => {
             h2.style.marginTop = '40px';
+        });
+        
+        // Aplicar estilo aos links nos parágrafos
+        document.querySelectorAll('p a, li a').forEach(link => {
+            if (!link.classList.contains('bia-cta-button')) {
+                link.style.textDecoration = 'none';
+            }
         });
     </script>
 </body>
@@ -1696,7 +1984,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
         titulo: idea.titulo,
         nicho: idea.generationParams?.nicho || idea.categoria || 'Geral',
         palavras_chave: idea.generationParams?.palavrasChave || idea.tags?.join(', ') || 'tecnologia, artigo',
-        idioma: 'Português',
+        idioma: idea.generationParams?.idioma || 'Português',
         conceito: idea.generationParams?.conceito || idea.generationParams?.contexto || '',
         empresa: '',
         idea_id: ideaId // ✅ ADICIONAR: ID da ideia para recuperar CTA
@@ -2367,7 +2655,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
                   titulo: idea.titulo,
                   nicho: idea.generationParams?.nicho || idea.categoria || 'Geral',  
                   palavras_chave: idea.generationParams?.palavrasChave || idea.tags?.join(', ') || '',
-                  idioma: 'Português',
+                  idioma: idea.generationParams?.idioma || 'Português',
                   conceito: idea.generationParams?.conceito || idea.generationParams?.contexto || '',
                   empresa: '',
                   idea_id: ideaId // ✅ ADICIONAR: ID da ideia para recuperar CTA (batch)
