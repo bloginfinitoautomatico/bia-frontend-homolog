@@ -116,6 +116,9 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
     }
   });
   
+  // ✅ NOVO: Armazenar AbortControllers para cancelar gerações em andamento
+  const [generationControllers, setGenerationControllers] = useState<Record<number, AbortController>>({});
+  
   const setProcessingSingle = useCallback((updater: Record<number, boolean> | ((prev: Record<number, boolean>) => Record<number, boolean>)) => {
     setProcessingSingleState(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
@@ -1024,6 +1027,50 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
     }, 1000);
   }, []);
 
+  // 🛑 CANCELAR GERAÇÃO EM ANDAMENTO
+  const handleCancelProduction = useCallback((ideaId: number) => {
+    console.log(`🛑 Cancelando geração da ideia ${ideaId}`);
+    
+    // Cancelar a requisição HTTP
+    const controller = generationControllers[ideaId];
+    if (controller) {
+      controller.abort();
+      console.log(`✅ Requisição cancelada para ideia ${ideaId}`);
+    }
+    
+    // Limpar estado de processamento
+    setProcessingSingle(prev => {
+      const newState = { ...prev };
+      delete newState[ideaId];
+      return newState;
+    });
+    
+    setSingleProgress(prev => {
+      const newState = { ...prev };
+      delete newState[ideaId];
+      return newState;
+    });
+    
+    setGlobalProcessingLock(prev => {
+      const newState = { ...prev };
+      delete newState[ideaId];
+      return newState;
+    });
+    
+    // Remover controller
+    setGenerationControllers(prev => {
+      const newState = { ...prev };
+      delete newState[ideaId];
+      return newState;
+    });
+    
+    toast.warning('Geração cancelada', {
+      description: 'Você pode tentar produzir novamente'
+    });
+    
+    console.log(`✅ Estado da ideia ${ideaId} limpo`);
+  }, [generationControllers]);
+
   // Verificar se todas as ideias da página atual estão selecionadas
   const allCurrentPageSelected = useMemo(() => {
     const currentPageIds = currentPageIdeas.map(idea => idea.id);
@@ -1622,6 +1669,19 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
       const token = localStorage.getItem('auth_token');
       
+      // ✅ NOVO: Criar AbortController para permitir cancelamento
+      const abortController = new AbortController();
+      setGenerationControllers(prev => ({ ...prev, [ideaId]: abortController }));
+      
+      // ✅ NOVO: Timeout de 3 minutos (180 segundos)
+      const timeoutId = setTimeout(() => {
+        console.log(`⏰ Timeout de 3 minutos atingido para ideia ${ideaId} - cancelando...`);
+        abortController.abort();
+        toast.error('Timeout: Geração demorou muito tempo', {
+          description: 'Tente novamente em alguns minutos'
+        });
+      }, 180000); // 3 minutos
+      
       // ✅ NOVA IMPLEMENTAÇÃO: Retry automático para problemas de rede
       let response;
       let apiResponse;
@@ -1646,8 +1706,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
               'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify(requestParams),
-            // Aumentar timeout para evitar problemas de rede
-            signal: AbortSignal.timeout(120000) // 2 minutos
+            signal: abortController.signal // Usar AbortController
           });
 
           if (!response.ok) {
@@ -1905,6 +1964,14 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
         });
       }
     } finally {
+      // ✅ LIMPAR AbortController e timeout
+      clearTimeout(timeoutId);
+      setGenerationControllers(prev => {
+        const newState = { ...prev };
+        delete newState[ideaId];
+        return newState;
+      });
+      
       // ✅ REMOVER LOCK GLOBAL
       setGlobalProcessingLock(prev => {
         const newState = { ...prev };
@@ -3785,6 +3852,17 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
                               <Zap className="h-4 w-4 mr-1" />
                             )}
                             {isProcessing || (processingBatch && batchItemProgress !== undefined) ? 'Produzindo...' : 'Produzir'}
+                          </Button>
+                        )}
+                        
+                        {/* 🛑 Botão para cancelar geração em andamento */}
+                        {isProcessing && (
+                          <Button
+                            onClick={() => handleCancelProduction(idea.id)}
+                            className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 text-sm"
+                          >
+                            <AlertCircle className="h-4 w-4 mr-1" />
+                            Cancelar
                           </Button>
                         )}
                         
