@@ -1841,14 +1841,26 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
               console.log('📝 Nenhum site_id fornecido');
             }
 
-            console.log(`💾 Criando ideia no backend com site_id: ${validSiteId}...`, ideaData.titulo);
+            // ✅ CORREÇÃO FINAL: Backend usa UUID, converter ID numérico se necessário
+            let backendSiteId: string | null = null;
+            if (validSiteId) {
+              const siteObj = state.sites.find(s => s.id === validSiteId);
+              if (siteObj) {
+                // Se o site tem UUID, usar UUID; senão usar o ID como string
+                backendSiteId = siteObj.uuid || String(siteObj.id);
+                console.log(`💾 Criando ideia no backend com site_id: ${backendSiteId} (de ID local: ${validSiteId})...`, ideaData.titulo);
+              } else {
+                console.warn(`⚠️ Site ${validSiteId} não encontrado no estado local, tentando enviar mesmo assim`);
+                backendSiteId = String(validSiteId);
+              }
+            }
 
             const result = await apiService.createIdeia({
               titulo: ideaData.titulo,
               descricao: ideaData.descricao || '',
               categoria: ideaData.categoria,
               tags: JSON.stringify(ideaData.tags || []),
-              site_id: validSiteId,
+              site_id: backendSiteId,
               status: ideaData.status || 'ativa',
               cta: ideaData.cta ? JSON.stringify(ideaData.cta) : null,
               generation_params: ideaData.generationParams ? JSON.stringify(ideaData.generationParams) : null,
