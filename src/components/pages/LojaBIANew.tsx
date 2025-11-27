@@ -645,14 +645,6 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
             </div>
           )}
         </div>
-        
-        {!isArticlePack && plan.description && plan.description.length < 50 && (
-          <div className="text-center mt-3">
-            <p className="font-montserrat text-xs sm:text-sm lg:text-base text-gray-600 text-center px-2">
-              {plan.description}
-            </p>
-          </div>
-        )}
       </CardHeader>
 
       <CardContent className="space-y-4 lg:space-y-6 p-4 lg:p-6 pt-0">
