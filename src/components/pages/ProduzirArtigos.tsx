@@ -3340,13 +3340,13 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
             };
             
             // 1. Atualizar artigo no estado local (BiaContext)
-            const localUpdateSuccess = actions.updateArticle(Number(article.id), publishData);
+            const localUpdateSuccess = actions.updateArticle(article.id, publishData);
             
             // 2. Atualizar artigo no backend Laravel para persistir e aparecer no calendário
             try {
               console.log(`💾 Atualizando artigo ${article.id} no backend Laravel (publicação em massa)...`);
               const { updateArticle } = await import('../../services/articleService');
-              const backendUpdateResult = await updateArticle(Number(article.id), {
+              const backendUpdateResult = await updateArticle(article.id, {
                 status: 'publicado', // Note: backend usa 'publicado', frontend usa 'Publicado'
                 published_at: new Date().toISOString(),
                 wordpress_data: publishResult.postId?.toString()

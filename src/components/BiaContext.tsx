@@ -900,8 +900,8 @@ const BiaContext = createContext<{
 
     // Artigos
     addArticle: (article: Omit<Article, 'id' | 'createdAt' | 'updatedAt'>) => Promise<boolean>;
-    updateArticle: (id: number, updates: Partial<Article>) => boolean;
-    deleteArticle: (id: number) => boolean;
+    updateArticle: (id: string | number, updates: Partial<Article>) => boolean;
+    deleteArticle: (id: string | number) => boolean;
 
     // Limites/planos
     checkFreePlanLimits: () => { sites: boolean; ideas: boolean; articles: boolean };
@@ -2408,7 +2408,7 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
       }
     },
 
-    updateArticle: (id: number, updates: Partial<Article>) => {
+    updateArticle: (id: string | number, updates: Partial<Article>) => {
       try {
         // Atualizar estado local primeiro
         const nextArticles = state.articles.map((a) =>
@@ -2472,7 +2472,7 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
       }
     },
 
-    deleteArticle: (id: number) => {
+    deleteArticle: (id: string | number) => {
       try {
         const nextArticles = state.articles.filter((a) => a.id !== id);
         dispatch({ type: 'SET_ARTICLES', payload: nextArticles });

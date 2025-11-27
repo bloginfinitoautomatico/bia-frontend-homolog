@@ -37,13 +37,13 @@ function getAuthHeaders(): Record<string, string> {
 }
 
 export interface Article {
-  id: number;
+  id: string; // ✅ CORREÇÃO: id é UUID string, não number
   titulo: string;
   conteudo: string;
   image_url?: string;
   status: string;
-  site_id?: number;
-  ideia_id?: number | string;
+  site_id?: string;
+  ideia_id?: string;
   categoria?: string;
   tags?: string[];
   seo_data?: any;
@@ -169,7 +169,7 @@ export async function getArticles() {
 /**
  * Atualizar artigo
  */
-export async function updateArticle(id: number, payload: Partial<CreateArticlePayload>) {
+export async function updateArticle(id: string | number, payload: Partial<CreateArticlePayload>) {
   try {
     console.log('🗑️ Deletando artigo:', id);
     
@@ -203,7 +203,7 @@ export async function updateArticle(id: number, payload: Partial<CreateArticlePa
 /**
  * Deletar artigo
  */
-export async function deleteArticle(id: number) {
+export async function deleteArticle(id: string | number) {
   try {
     console.log('📡 Buscando artigo por ID:', id);
     
@@ -235,7 +235,7 @@ export async function deleteArticle(id: number) {
 /**
  * Publicar artigo
  */
-export async function publishArticle(id: number) {
+export async function publishArticle(id: string | number) {
   try {
     console.log('📡 Publicando artigo:', id);
     
