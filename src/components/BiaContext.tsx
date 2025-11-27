@@ -32,8 +32,7 @@ declare global {
 // Tipos / Interfaces
 // =======================
 interface Site {
-  id: number;
-    uuid?: string; // UUID do backend (usado para foreign keys nas APIs)
+  id: string; // ✅ CORRIGIDO: UUID do backend (não number)
   user_id?: number;
   user?: {
     id: string;
@@ -168,8 +167,8 @@ type BiaAction =
   | { type: 'UPDATE_USER'; payload: Partial<User> }
   | { type: 'SET_SITES'; payload: Site[] }
   | { type: 'ADD_SITE'; payload: Site }
-  | { type: 'UPDATE_SITE'; payload: { id: number; updates: Partial<Site> } }
-  | { type: 'DELETE_SITE'; payload: number }
+  | { type: 'UPDATE_SITE'; payload: { id: string; updates: Partial<Site> } }
+  | { type: 'DELETE_SITE'; payload: string }
   | { type: 'SET_IDEAS'; payload: Idea[] }
   | { type: 'ADD_IDEAS'; payload: Idea[] }
   | { type: 'UPDATE_IDEA'; payload: { id: number; updates: Partial<Idea> } }
@@ -417,11 +416,10 @@ class ApiService {
     }
   }
 
-  async updateSite(id: number, updates: Partial<Site>): Promise<{ success: boolean; data?: Site; error?: string }> {
+  async updateSite(id: string, updates: Partial<Site>): Promise<{ success: boolean; data?: Site; error?: string }> {
     try {
-      // Usar UUID do backend quando disponível
-      const targetSite = state.sites.find(s => s.id === id);
-      const backendId = (targetSite && targetSite.uuid) ? targetSite.uuid : id;
+      // ID já é UUID do backend
+      const backendId = String(id);
 
       const result = await this.makeRequest(`/sites/${backendId}`, {
         method: 'PUT',
@@ -797,8 +795,8 @@ const BiaContext = createContext<{
 
     // Sites
     addSite: (site: Omit<Site, 'id' | 'createdAt' | 'updatedAt'>) => Promise<boolean>;
-    updateSite: (id: number, updates: Partial<Site>) => Promise<boolean>;
-    deleteSite: (id: number) => Promise<boolean>;
+    updateSite: (id: string, updates: Partial<Site>) => Promise<boolean>;
+    deleteSite: (id: string) => Promise<boolean>;
 
     // Ideias
     addIdeas: (ideas: Omit<Idea, 'id' | 'createdAt' | 'updatedAt'>[]) => Promise<boolean>;
@@ -1663,8 +1661,7 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
           if (result.success && result.data) {
             const backendSite = result.data as any;
             const mappedSite: Site = {
-              id: state.sites.length + 1,
-              uuid: backendSite.id,
+              id: backendSite.id, // ✅ CORRIGIDO: Usar UUID do backend como ID principal
               user_id: backendSite.user_id,
               user: backendSite.user,
               nome: backendSite.nome,
@@ -1690,10 +1687,11 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
             throw new Error(result.error || 'Erro ao criar site no backend');
           }
         } else {
-          // Fallback: criar localmente
+          // Fallback: criar localmente com UUID temporário
+          const temporaryUUID = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
           const newSite: Site = {
             ...siteData,
-            id: Date.now(),
+            id: temporaryUUID,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           };
@@ -1715,7 +1713,7 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
       }
     },
 
-    updateSite: async (id: number, updates: Partial<Site>) => {
+    updateSite: async (id: string, updates: Partial<Site>) => {
       try {
         dispatch({ type: 'SET_LOADING', payload: true });
         
@@ -1752,15 +1750,14 @@ export function BiaProvider({ children }: { children: React.ReactNode }) {
       }
     },
 
-    deleteSite: async (id: number) => {
+    deleteSite: async (id: string) => {
       try {
         dispatch({ type: 'SET_LOADING', payload: true });
         
         const isOnline = await apiService.testConnection();
         
         if (isOnline) {
-          const targetSite = state.sites.find(s => String(s.id) === String(id) || s.uuid === String(id));
-          const backendId = targetSite?.uuid ? targetSite.uuid : String(id);
+          const backendId = String(id);
           const result = await apiService.deleteSite(backendId);
           
           if (result.success) {

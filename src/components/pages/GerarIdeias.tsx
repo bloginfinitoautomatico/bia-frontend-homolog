@@ -825,7 +825,7 @@ export function GerarIdeias({ userData, onPageChange, onUpdateUser }: GerarIdeia
           titulo: tituloLimpo,
           formDataSiteId: formData.siteId,
           formDataSiteIdType: typeof formData.siteId,
-          selectedSite: selectedSite ? { id: selectedSite.id, uuid: selectedSite.uuid, nome: selectedSite.nome } : null
+          selectedSite: selectedSite ? { id: selectedSite.id, nome: selectedSite.nome } : null
         });
         
         const ideaData = {
