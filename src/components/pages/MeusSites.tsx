@@ -229,14 +229,29 @@ export function MeusSites({ userData, onUpdateUser, onNavigate }: MeusSitesProps
         const errorBody = await testResult.text();
         console.error('❌ Erro na resposta:', {
           status: testResult.status,
-          body: errorBody.substring(0, 200)
+          body: errorBody.substring(0, 500)
         });
         
-        if (testResult.status === 401) {
+        // Verificar se é erro 401 do BIA (token expirado)
+        if (testResult.status === 401 && errorBody.includes('"code":"INTERNAL_SERVER_ERROR"')) {
           toast.error('Autenticação expirada. Fazendo login novamente...');
-          // Tentar renovar sessão
           await actions.refreshUserData();
           throw new Error('Token expirado - por favor, tente novamente');
+        }
+        
+        // Verificar se é erro 401 do WordPress (credenciais inválidas)
+        if (testResult.status === 401 || testResult.status === 403) {
+          try {
+            const errorJson = JSON.parse(errorBody);
+            if (errorJson.message && errorJson.message.includes('senha de aplica')) {
+              throw new Error('❌ Senha de aplicação inválida no WordPress. Verifique o usuário e a Application Password.');
+            } else if (errorJson.message && errorJson.message.includes('desconhecido')) {
+              throw new Error('❌ Usuário WordPress não encontrado. Verifique o nome de usuário.');
+            }
+          } catch (e) {
+            // Se não conseguir parsear, use a mensagem genérica
+          }
+          throw new Error('❌ Falha na autenticação do WordPress. Verifique as credenciais.');
         }
         
         throw new Error(`Falha na conexão com WordPress (${testResult.status})`);
