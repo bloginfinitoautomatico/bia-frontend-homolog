@@ -326,9 +326,6 @@ export function CheckoutModal({ isOpen, onClose, plan, userData, onSuccess }: Ch
               <div className="bg-purple-50 p-4 rounded-lg">
                 <h3 className="font-montserrat font-semibold text-purple-800">{plan.name}</h3>
                 <p className="text-purple-600 text-lg font-bold">{formatPrice(plan.price)}</p>
-                {plan.isRecurring && (
-                  <p className="text-purple-600 text-sm">Recorrente mensalmente</p>
-                )}
               </div>
             </CardHeader>
 
