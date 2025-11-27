@@ -183,6 +183,24 @@ export function MeusSites({ userData, onUpdateUser, onNavigate }: MeusSitesProps
         }    setConnecting(true);
     
     try {
+      // 🔐 VALIDAÇÃO CRÍTICA: Verificar token ANTES de fazer requisições
+      const token = localStorage.getItem('auth_token');
+      
+      if (!token || token.trim() === '') {
+        console.error('❌ Token vazio ou inválido - sessão expirada');
+        toast.error('Sessão expirada. Por favor, faça login novamente.');
+        setConnecting(false);
+        window.location.hash = '#/login';
+        return;
+      }
+      
+      console.log('🔐 Token validado:', {
+        exists: !!token,
+        length: token.length,
+        preview: token.substring(0, 30) + '...',
+        timestamp: new Date().toISOString()
+      });
+
       // 1. Testar conexão WordPress primeiro
       console.log('🔄 Testando conexão WordPress...');
       
@@ -190,7 +208,7 @@ export function MeusSites({ userData, onUpdateUser, onNavigate }: MeusSitesProps
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           wordpress_url: siteForm.url,
@@ -199,8 +217,29 @@ export function MeusSites({ userData, onUpdateUser, onNavigate }: MeusSitesProps
         })
       });
 
+      // 🔍 DEBUG: Log detalhado da resposta
+      console.log('📊 Response from test-connection:', {
+        status: testResult.status,
+        statusText: testResult.statusText,
+        contentType: testResult.headers.get('content-type'),
+        timestamp: new Date().toISOString()
+      });
+
       if (!testResult.ok) {
-        throw new Error('Falha na conexão com WordPress');
+        const errorBody = await testResult.text();
+        console.error('❌ Erro na resposta:', {
+          status: testResult.status,
+          body: errorBody.substring(0, 200)
+        });
+        
+        if (testResult.status === 401) {
+          toast.error('Autenticação expirada. Fazendo login novamente...');
+          // Tentar renovar sessão
+          await actions.refreshUserData();
+          throw new Error('Token expirado - por favor, tente novamente');
+        }
+        
+        throw new Error(`Falha na conexão com WordPress (${testResult.status})`);
       }
 
       // 2. Buscar dados WordPress (categorias, autores, tags)
@@ -211,7 +250,7 @@ export function MeusSites({ userData, onUpdateUser, onNavigate }: MeusSitesProps
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
             wordpress_url: siteForm.url,
@@ -223,7 +262,7 @@ export function MeusSites({ userData, onUpdateUser, onNavigate }: MeusSitesProps
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
             wordpress_url: siteForm.url,
@@ -235,7 +274,7 @@ export function MeusSites({ userData, onUpdateUser, onNavigate }: MeusSitesProps
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+            'Authorization': `Bearer ${token}`
           },
           body: JSON.stringify({
             wordpress_url: siteForm.url,
@@ -247,7 +286,11 @@ export function MeusSites({ userData, onUpdateUser, onNavigate }: MeusSitesProps
 
       // Verificar se todas as respostas foram bem-sucedidas
       if (!categoriesRes.ok || !authorsRes.ok || !tagsRes.ok) {
-        console.warn('⚠️ Algumas requisições falharam, mas continuando...');
+        console.warn('⚠️ Algumas requisições falharam, mas continuando...', {
+          categories: { status: categoriesRes.status, ok: categoriesRes.ok },
+          authors: { status: authorsRes.status, ok: authorsRes.ok },
+          tags: { status: tagsRes.status, ok: tagsRes.ok }
+        });
       }
 
       const categories = categoriesRes.ok ? await categoriesRes.json() : [];

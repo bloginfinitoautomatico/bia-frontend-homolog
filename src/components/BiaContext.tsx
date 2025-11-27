@@ -474,6 +474,99 @@ class ApiService {
     }
   }
 
+  // ✅ NOVO: WordPress Connection Methods
+  async testWordPressConnection(data: {
+    wordpress_url: string;
+    wordpress_username: string;
+    wordpress_password: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    try {
+      console.log('🧪 [API] Testando conexão WordPress...');
+      const result = await this.makeRequest('/wordpress/test-connection', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      
+      if (result.success) {
+        console.log('✅ [API] Conexão WordPress validada');
+      }
+      
+      return result;
+    } catch (error: any) {
+      console.error('❌ [API] Erro ao testar conexão WordPress:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async getWordPressCategories(data: {
+    wordpress_url: string;
+    wordpress_username: string;
+    wordpress_password: string;
+  }): Promise<{ success: boolean; data?: any[]; error?: string }> {
+    try {
+      console.log('📂 [API] Buscando categorias do WordPress...');
+      const result = await this.makeRequest('/wordpress/get-categories', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      
+      if (result.success) {
+        console.log(`✅ [API] ${result.data?.length || 0} categorias carregadas`);
+      }
+      
+      return result;
+    } catch (error: any) {
+      console.error('❌ [API] Erro ao buscar categorias:', error);
+      return { success: false, data: [], error: error.message };
+    }
+  }
+
+  async getWordPressAuthors(data: {
+    wordpress_url: string;
+    wordpress_username: string;
+    wordpress_password: string;
+  }): Promise<{ success: boolean; data?: any[]; error?: string }> {
+    try {
+      console.log('👥 [API] Buscando autores do WordPress...');
+      const result = await this.makeRequest('/wordpress/get-authors', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      
+      if (result.success) {
+        console.log(`✅ [API] ${result.data?.length || 0} autores carregados`);
+      }
+      
+      return result;
+    } catch (error: any) {
+      console.error('❌ [API] Erro ao buscar autores:', error);
+      return { success: false, data: [], error: error.message };
+    }
+  }
+
+  async getWordPressTags(data: {
+    wordpress_url: string;
+    wordpress_username: string;
+    wordpress_password: string;
+  }): Promise<{ success: boolean; data?: any[]; error?: string }> {
+    try {
+      console.log('🏷️ [API] Buscando tags do WordPress...');
+      const result = await this.makeRequest('/wordpress/get-tags', {
+        method: 'POST',
+        body: JSON.stringify(data),
+      });
+      
+      if (result.success) {
+        console.log(`✅ [API] ${result.data?.length || 0} tags carregadas`);
+      }
+      
+      return result;
+    } catch (error: any) {
+      console.error('❌ [API] Erro ao buscar tags:', error);
+      return { success: false, data: [], error: error.message };
+    }
+  }
+
   // Ideas API
   async getIdeas(): Promise<{ success: boolean; data?: Idea[]; error?: string }> {
     try {
