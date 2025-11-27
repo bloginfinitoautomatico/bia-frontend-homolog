@@ -756,6 +756,25 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
     };
   }, [processingBatch, isBatchPersistent, getUserSpecificKey]);
 
+  // ✅ NOVO: Listener para quando artigos são agendados em massa
+  useEffect(() => {
+    const handleArticlesUpdated = (event: any) => {
+      console.log('📡 Evento detectado em ProduzirArtigos: articles-updated', event.detail);
+      if (event.detail?.type === 'scheduled') {
+        console.log(`🔄 Atualizando ProduzirArtigos após ${event.detail.count} artigos agendados...`);
+        // Forçar re-renderização com nova chave
+        setRefreshKey(prev => prev + 1);
+        // Resetar seleção para limpar a UI
+        setSelectedIdeaIds([]);
+        setBatchProgress({});
+        setSingleProgress({});
+      }
+    };
+    
+    window.addEventListener('articles-updated', handleArticlesUpdated);
+    return () => window.removeEventListener('articles-updated', handleArticlesUpdated);
+  }, []);
+
   // Verificar limites do plano
   const limits = actions.checkFreePlanLimits();
   const isFreePlan = actions.isFreePlan();

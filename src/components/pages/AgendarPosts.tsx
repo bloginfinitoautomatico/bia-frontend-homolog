@@ -365,8 +365,9 @@ export function AgendarPosts({ userData }: AgendarPostsProps) {
 
           if (result.success && result.postId) {
             // Atualizar artigo com dados do agendamento WordPress
+            // ⚠️ IMPORTANTE: usar status 'agendado' (minúsculo) para compatibilidade com filtros
             const success = actions.updateArticle(article.id, { 
-              status: 'Agendado' as const,
+              status: 'agendado' as const,
               scheduledDate: localScheduleDate, // Usar data local consistente
               wordpressData: result.postId
             });
@@ -402,14 +403,30 @@ export function AgendarPosts({ userData }: AgendarPostsProps) {
         toast.error(`❌ Nenhum post foi agendado. Todos os ${errorCount} tentativas falharam.`);
       }
 
-      // Forçar refresh dos dados para atualizar todas as listas
+      // ✅ CORREÇÃO CRÍTICA: Forçar sync com backend após agendamento
       if (successCount > 0) {
-        console.log('🔄 Forçando refresh dos dados após agendamento...');
+        console.log('🔄 Forçando sincronização com backend após agendamento...');
+        
         try {
+          // 1. Forçar refresh dos dados da API
+          console.log('📡 Sincronizando dados do backend...');
           await actions.refreshUserData();
-          console.log('✅ Dados atualizados com sucesso');
+          console.log('✅ Dados sincronizados com sucesso');
+          
+          // 2. Pequeno delay para garantir que o estado foi atualizado
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // 3. Forçar re-renderização de todas as páginas
+          // Isso atualiza:
+          // - ProduzirArtigos (remove artigos agendados da lista)
+          // - Calendario (mostra artigos agendados)
+          // - AgendarPosts (mostra artigos agendados existentes)
+          console.log('🔁 Forçando re-renderização de componentes...');
+          window.dispatchEvent(new CustomEvent('articles-updated', { detail: { type: 'scheduled', count: successCount } }));
+          
         } catch (refreshError) {
-          console.error('❌ Erro ao atualizar dados:', refreshError);
+          console.error('❌ Erro ao sincronizar dados:', refreshError);
+          toast.error('⚠️ Agendamento concluído, mas houve erro ao atualizar a interface. Recarregue a página.');
         }
       }
       

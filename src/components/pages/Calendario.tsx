@@ -198,6 +198,24 @@ export function Calendario({ userData, onUpdateUser }: CalendarioProps) {
     return () => window.removeEventListener('focus', onFocus);
   }, [fetchAgendamentos, fetchPublishedArticles]);
 
+  // ✅ NOVO: Listener para quando artigos são agendados em massa
+  useEffect(() => {
+    const handleArticlesUpdated = (event: any) => {
+      console.log('📡 Evento detectado: articles-updated', event.detail);
+      if (event.detail?.type === 'scheduled') {
+        console.log(`🔄 Recarregando calendário após ${event.detail.count} artigos agendados...`);
+        // Pequeno delay para garantir que o backend já foi atualizado
+        setTimeout(() => {
+          fetchAgendamentos();
+          fetchPublishedArticles();
+        }, 1000);
+      }
+    };
+    
+    window.addEventListener('articles-updated', handleArticlesUpdated);
+    return () => window.removeEventListener('articles-updated', handleArticlesUpdated);
+  }, [fetchAgendamentos, fetchPublishedArticles]);
+
   // Mês e ano atual
   const currentMonth = currentDate.getMonth();
   const currentYear = currentDate.getFullYear();
