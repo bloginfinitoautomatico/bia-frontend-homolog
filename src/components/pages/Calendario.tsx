@@ -939,16 +939,44 @@ export function Calendario({ userData, onUpdateUser }: CalendarioProps) {
                                 Visualizar
                               </Button>
 
-                              {post.type === 'published' && post.url && post.url !== '#' && (
-                                <Button 
-                                  onClick={() => window.open(post.url, '_blank')} 
-                                  className="h-10 px-4 bg-[#8c52ff] hover:bg-[#7a47e6] text-white shadow-sm"
-                                  title={`Abrir artigo publicado: ${post.url}`}
-                                >
-                                  <ExternalLink className="h-4 w-4 mr-2" />
-                                  Ver Online
-                                </Button>
-                              )}
+                              {post.type === 'published' && (() => {
+                                // Buscar a URL mais confiável possível
+                                let publicUrl = post.url;
+                                
+                                // Se não tiver URL no post, tentar buscar do artigo ou agendamento
+                                if (!publicUrl || publicUrl === '#') {
+                                  if (post.article) {
+                                    publicUrl = post.article.published_url || post.article.publishedUrl || 
+                                               post.article.wordpress_url || post.article.wordpressUrl ||
+                                               post.article.link;
+                                  }
+                                  if (!publicUrl && post.agendamento) {
+                                    publicUrl = post.agendamento.published_url || post.agendamento.publishedUrl ||
+                                               post.agendamento.wordpress_url || post.agendamento.link;
+                                    if (post.agendamento.wordpress_post_id) {
+                                      try {
+                                        const wp = JSON.parse(post.agendamento.wordpress_post_id);
+                                        if (wp?.link) publicUrl = wp.link;
+                                      } catch {}
+                                    }
+                                  }
+                                }
+                                
+                                // Validar que é uma URL válida
+                                const isValidUrl = publicUrl && publicUrl !== '#' && 
+                                                 (publicUrl.startsWith('http://') || publicUrl.startsWith('https://') || publicUrl.startsWith('/'));
+                                
+                                return isValidUrl && (
+                                  <Button 
+                                    onClick={() => window.open(publicUrl, '_blank')} 
+                                    className="h-10 px-4 bg-[#8c52ff] hover:bg-[#7a47e6] text-white shadow-sm"
+                                    title={`Abrir artigo publicado: ${publicUrl}`}
+                                  >
+                                    <ExternalLink className="h-4 w-4 mr-2" />
+                                    Ver Online
+                                  </Button>
+                                );
+                              })()}
                             </div>
                           </div>
                         </CardContent>
