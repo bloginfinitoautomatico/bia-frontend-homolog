@@ -245,9 +245,9 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
     {
       id: 'pack-50',
       name: '50 Artigos',
-      price: 100,
+      price: 120,
       originalPrice: null,
-      description: 'R$ 2,00 por artigo',
+      description: 'R$ 2,40 por artigo',
       icon: FileText,
       color: 'purple',
       popular: false,

@@ -143,9 +143,9 @@ export function ArticlePacksModal({ isOpen, onClose, userData }: ArticlePacksMod
       id: '5',
       name: '50 Artigos',
       articles: 50,
-      price: 100,
-      originalPrice: 130,
-      description: 'R$ 2,00 por artigo',
+      price: 120,
+      originalPrice: 160,
+      description: 'R$ 2,40 por artigo',
       badge: 'Econômico',
       savings: '23% OFF'
     },
