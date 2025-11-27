@@ -3738,12 +3738,32 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
       );
 
       if (result.success && result.postId) {
-        // Atualizar artigo com dados do agendamento
+        // 1. Atualizar artigo no estado local (BiaContext)
         const articleUpdateSuccess = actions.updateArticle(article.id, {
           status: 'Agendado' as const,
           scheduledDate: localScheduleDate, // Usar data local consistente
           wordpressData: result.postId
         });
+
+        // 2. Atualizar artigo no backend Laravel para persistir a alteração
+        try {
+          console.log('💾 Atualizando artigo agendado no backend Laravel...');
+          const { updateArticle } = await import('../../services/articleService');
+          const backendUpdateResult = await updateArticle(article.id, {
+            status: 'agendado', // Note: backend usa 'agendado', frontend usa 'Agendado'
+            wordpress_data: result.postId?.toString()
+          });
+          
+          if (backendUpdateResult.success) {
+            console.log('✅ Artigo agendado atualizado no backend Laravel com sucesso');
+          } else {
+            console.warn('⚠️ Erro ao atualizar artigo agendado no backend:', backendUpdateResult.error);
+            // Não vamos falhar por isso, apenas logar
+          }
+        } catch (backendError) {
+          console.warn('⚠️ Erro na comunicação com backend:', backendError);
+          // Não vamos falhar por isso, apenas logar
+        }
 
         if (articleUpdateSuccess) {
           console.log(`✅ Artigo ${article.id} agendado no WordPress com sucesso`);
