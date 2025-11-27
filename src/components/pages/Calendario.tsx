@@ -144,6 +144,19 @@ export function Calendario({ userData, onUpdateUser }: CalendarioProps) {
         const siteIdVal = article.site_id ?? article.siteId;
         const siteIdNum = siteIdVal ? (toSiteIdNumber(siteIdVal) ?? siteIdVal) : 0; // Preservar UUID se não for número
         const dateVal = article.published_at ?? article.publishedAt ?? article.created_at ?? article.createdAt;
+        
+        // Construir URL do artigo - tentar múltiplas fontes
+        let articleUrl = article.published_url ?? article.publishedUrl ?? article.link ?? null;
+        
+        // Se não tiver URL mas tiver site info, construir a partir da URL do site
+        if (!articleUrl && article.site) {
+          const siteUrl = article.site.url || article.site.link;
+          const slug = article.slug ?? article.post_name ?? article.titulo?.toLowerCase().replace(/\s+/g, '-');
+          if (siteUrl && slug) {
+            articleUrl = `${siteUrl}/${slug}`;
+          }
+        }
+        
         return {
           id: `api-article-${article.id}`,
           title: article.titulo ?? article.title ?? '(Sem título)',
@@ -153,7 +166,7 @@ export function Calendario({ userData, onUpdateUser }: CalendarioProps) {
           type: 'published',
           status: 'Publicado',
           siteId: siteIdNum,
-          url: article.published_url ?? article.publishedUrl ?? article.link ?? '#',
+          url: articleUrl || '#',
           articleId: article.id,
           article,
           source: 'api-articles',
