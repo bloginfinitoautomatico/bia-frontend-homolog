@@ -3582,13 +3582,13 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
           };
           
           // 1. Atualizar artigo no estado local (BiaContext)
-          const localUpdateSuccess = actions.updateArticle(Number(article.id), publishData);
+          const localUpdateSuccess = actions.updateArticle(article.id, publishData);
           
           // 2. Atualizar artigo no backend Laravel para persistir a alteração
           try {
             console.log('💾 Atualizando artigo no backend Laravel...');
             const { updateArticle } = await import('../../services/articleService');
-            const backendUpdateResult = await updateArticle(Number(article.id), {
+            const backendUpdateResult = await updateArticle(article.id, {
               status: 'publicado', // Note: backend usa 'publicado', frontend usa 'Publicado'
               published_at: new Date().toISOString(),
               wordpress_data: publishResult.postId?.toString()
@@ -3739,7 +3739,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
 
       if (result.success && result.postId) {
         // Atualizar artigo com dados do agendamento
-        const articleUpdateSuccess = actions.updateArticle(Number(article.id), {
+        const articleUpdateSuccess = actions.updateArticle(article.id, {
           status: 'Agendado' as const,
           scheduledDate: localScheduleDate, // Usar data local consistente
           wordpressData: result.postId
