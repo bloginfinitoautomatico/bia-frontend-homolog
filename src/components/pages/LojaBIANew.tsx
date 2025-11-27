@@ -254,9 +254,9 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
       articles: 50,
       validity: '30 dias',
       features: [
-        '50 Artigos Extras',
         'Válido por 30 dias',
-        'Uso imediato'
+        'Uso imediato',
+        'Requer Plano Pago'
       ]
     },
     {
@@ -271,9 +271,9 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
       articles: 100,
       validity: '45 dias',
       features: [
-        '100 Artigos Extras',
         'Válido por 45 dias',
-        'Melhor custo-benefício'
+        'Melhor custo-benefício',
+        'Requer Plano Pago'
       ]
     },
     {
@@ -288,9 +288,9 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
       articles: 200,
       validity: '60 dias',
       features: [
-        '200 Artigos Extras',
         'Válido por 60 dias',
-        'Economia de 20%'
+        'Economia de 20%',
+        'Requer Plano Pago'
       ]
     },
     {
@@ -305,9 +305,9 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
       articles: 300,
       validity: '75 dias',
       features: [
-        '300 Artigos Extras',
         'Válido por 75 dias',
-        'Grande economia'
+        'Economia de 27%',
+        'Requer Plano Pago'
       ]
     },
     {
@@ -322,9 +322,9 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
       articles: 500,
       validity: '90 dias',
       features: [
-        '500 Artigos Extras',
         'Válido por 90 dias',
-        'Economia de 33%'
+        'Economia de 33%',
+        'Requer Plano Pago'
       ]
     },
     {
@@ -339,9 +339,9 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
       articles: 1000,
       validity: '120 dias',
       features: [
-        '1000 Artigos Extras',
         'Válido por 120 dias',
-        'Máxima economia'
+        'Máxima economia',
+        'Requer Plano Pago'
       ]
     }
   ];
@@ -628,11 +628,14 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
           )}
 
           {isArticlePack && plan.articles && (
-            <div className="text-center space-y-1">
+            <div className="text-center space-y-2">
               <div className="flex justify-center">
                 <Badge variant="outline" style={{color: '#8c52ff', borderColor: '#8c52ff', backgroundColor: '#f3f0ff'}}>
                   {plan.articles} artigos
                 </Badge>
+              </div>
+              <div className="text-xs text-gray-600 font-medium">
+                {plan.description}
               </div>
               {plan.validity && (
                 <div className="text-xs text-gray-500 text-center">
@@ -643,11 +646,13 @@ export function LojaBIA({ userData, onUpdateUser, onRefreshUser }: LojaBIAProps)
           )}
         </div>
         
-        <div className="text-center mt-3">
-          <p className="font-montserrat text-xs sm:text-sm lg:text-base text-gray-600 text-center px-2">
-            {plan.description}
-          </p>
-        </div>
+        {!isArticlePack && (
+          <div className="text-center mt-3">
+            <p className="font-montserrat text-xs sm:text-sm lg:text-base text-gray-600 text-center px-2">
+              {plan.description}
+            </p>
+          </div>
+        )}
       </CardHeader>
 
       <CardContent className="space-y-4 lg:space-y-6 p-4 lg:p-6 pt-0">
