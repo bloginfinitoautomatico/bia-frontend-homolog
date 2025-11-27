@@ -865,14 +865,12 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
       // IMPORTANTE: Excluir artigos já publicados ou agendados da página "Produzir Artigos"
       if (article) {
         // Verificação rigorosa de artigos publicados/agendados
-        const isPublished = article.status === 'Publicado' || 
-                           article.status === 'publicado' ||
+        const isPublished = article.status === 'publicado' || 
                            !!article.publishedUrl || 
                            !!article.publishedAt ||
                            !!article.publishedDate;
                            
-        const isScheduled = article.status === 'Agendado' || 
-                           article.status === 'agendado' ||
+        const isScheduled = article.status === 'agendado' || 
                            !!article.scheduledDate;
         
         if (isPublished || isScheduled) {
@@ -895,9 +893,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
       } else if (statusFilter === 'produced') {
         // Mostrar apenas ideias com artigos criados MAS NÃO publicados NEM agendados
         return !!article && 
-               article.status !== 'Publicado' && 
                article.status !== 'publicado' &&
-               article.status !== 'Agendado' && 
                article.status !== 'agendado' &&
                !article.publishedUrl &&
                !article.scheduledDate;
@@ -948,14 +944,12 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
       const article = state.articles.find(a => a.ideaId === idea.id);
       
       if (article) {
-        const isPublished = article.status === 'Publicado' || 
-                           article.status === 'publicado' ||
+        const isPublished = article.status === 'publicado' || 
                            !!article.publishedUrl || 
                            !!article.publishedAt ||
                            !!article.publishedDate;
                            
-        const isScheduled = article.status === 'Agendado' || 
-                           article.status === 'agendado' ||
+        const isScheduled = article.status === 'agendado' || 
                            !!article.scheduledDate;
         
         if (isPublished || isScheduled) return false;
@@ -966,9 +960,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
         return !article;
       } else if (statusFilter === 'produced') {
         return !!article && 
-               article.status !== 'Publicado' && 
                article.status !== 'publicado' &&
-               article.status !== 'Agendado' && 
                article.status !== 'agendado' &&
                !article.publishedUrl &&
                !article.scheduledDate;
@@ -3578,7 +3570,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
             publishedAt: new Date().toISOString(),
             publishedDate: new Date().toISOString(),
             wordpressData: publishResult.postId,
-            status: 'Publicado'
+            status: 'publicado'  // CORREÇÃO: Usar minúscula para consistência com backend
           };
           
           // 1. Atualizar artigo no estado local (BiaContext)
@@ -3589,7 +3581,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
             console.log('💾 Atualizando artigo no backend Laravel...');
             const { updateArticle } = await import('../../services/articleService');
             const backendUpdateResult = await updateArticle(article.id, {
-              status: 'publicado', // Note: backend usa 'publicado', frontend usa 'Publicado'
+              status: 'publicado', // Note: backend usa 'publicado', frontend usa 'publicado'
               published_at: new Date().toISOString(),
               wordpress_data: publishResult.postId?.toString()
             });
@@ -3740,7 +3732,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
       if (result.success && result.postId) {
         // 1. Atualizar artigo no estado local (BiaContext)
         const articleUpdateSuccess = actions.updateArticle(article.id, {
-          status: 'Agendado' as const,
+          status: 'agendado' as const,  // CORREÇÃO: Usar minúscula para consistência com backend
           scheduledDate: localScheduleDate, // Usar data local consistente
           wordpressData: result.postId
         });
@@ -3750,7 +3742,7 @@ export function ProduzirArtigos({ userData, onUpdateUser, onRefreshUser }: Produ
           console.log('💾 Atualizando artigo agendado no backend Laravel...');
           const { updateArticle } = await import('../../services/articleService');
           const backendUpdateResult = await updateArticle(article.id, {
-            status: 'agendado', // Note: backend usa 'agendado', frontend usa 'Agendado'
+            status: 'agendado', // Note: backend usa 'agendado', frontend usa 'agendado'
             wordpress_data: result.postId?.toString()
           });
           
